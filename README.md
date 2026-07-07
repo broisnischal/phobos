@@ -196,6 +196,20 @@ Removes the skills (symlinks or copies) and strips every phobos entry from `sett
 
 **I already have hooks / a status line.** install.sh appends alongside your hooks and refuses to replace a non-phobos status line. Everything is reversible via uninstall.sh.
 
+## Roadmap
+
+Planned, rough priority order. The phobos rule holds for every item: **it must cost nothing on turns that don't use it** — hooks off the request path, no per-turn model calls. PRs welcome.
+
+- [ ] **Shell-output guard** — a hook that trims noisy `Bash` results before they re-enter context: cap stdout, strip ANSI, collapse repeated lines, fold `git log` / install / test spew. *Saves: the biggest silent leak — verbose command output re-sent on every following turn.*
+- [ ] **Prompt-cache awareness** — surface live cache hit-rate and warn when a turn busts the stable prefix (reordered tools / system prompt / MCP set); nudge toward keeping the cached prefix stable. *Saves: cache reads bill ~0.1× fresh input.*
+- [ ] **Tool-output budgeter** — cap and de-dupe oversized `Read`/`Grep`/`Glob` payloads; summarize-on-overflow instead of dumping the whole thing into the window. *Saves: one accidental huge read no longer floods the session.*
+- [ ] **Subagent offloading nudge** — route wide searches to a subagent so its intermediate reads never touch main context; only the conclusion returns. *Saves: exploration tokens that would otherwise persist all session.*
+- [ ] **Model-tier routing** — nudge a cheaper model (Haiku/Sonnet) for mechanical turns; promote phobos-plan's routing into a live hook signal. *Saves: per-token price, not just count.*
+- [ ] **MCP trim advisor** — flag connected-but-unused MCP servers that bloat the system prompt (and the cached prefix). *Saves: fixed per-turn overhead.*
+- [ ] **Opt-in auto-compact** — today phobos only warns at the threshold; add a user-enabled auto `/compact` trigger. *Saves: the full-window re-send once context is stale.*
+- [ ] **Per-repo budget alerts** — set a $/token ceiling; the status line goes red and the ledger flags the overrun. *Saves: visibility that turns into behavior.*
+- [ ] **`.claudeignore` + guard presets** — per-ecosystem deny/allow bundles so the read-guard fits your stack out of the box. *Saves: setup friction; more waste blocked by default.*
+
 ## Development
 
 ```sh
