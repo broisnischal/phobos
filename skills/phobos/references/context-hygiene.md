@@ -4,6 +4,7 @@ Every token already in the window is re-sent (and re-billed) on every subsequent
 
 ## Don't bloat the window
 
+- **The read-guard enforces the floor.** `hooks/guard-reads.sh` denies reads of node_modules, lockfiles, minified/compiled files, build output, and unbounded huge files before they cost anything. A deny is guidance, not an obstacle — follow its suggested alternative instead of routing around it with `cat`.
 - **Don't re-read a file already in context.** The harness tracks file state; if you Read it this session, work from what you have.
 - **Grep the symbol, don't dump the file.** Need one function? `grep`/search for it; don't Read a 2000-line file to see 10 lines.
 - **Don't echo large tool output back** in your prose. Reference the result; don't quote it.
@@ -12,6 +13,8 @@ Every token already in the window is re-sent (and re-billed) on every subsequent
 - **Skip generated/vendored paths** by default — `node_modules/`, lockfiles, build output, `.git/`, minified bundles. If the repo has a `.claudeignore` (or similar convention), respect it; if it doesn't and you keep steering around the same noisy paths, suggest the user add one.
 
 ## Tell the user when to clear
+
+Two hooks already watch fill level for you: the status line shows a live `ctx N%` gauge, and `context-warn.sh` injects a `⚠ context ~N% full` line past ~75%. When that warning appears, relay it — finish the current step, then recommend the right command in one line.
 
 You can't run these — recommend them:
 

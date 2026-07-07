@@ -1,0 +1,2 @@
+{"session":"a1","model":"claude-opus-4-8","turns":12,"out":8200,"in_new":4100,"cache_read":210000,"cache_write":9000,"secs":420,"end":"2026-07-05T10:11:02.000Z"}
+{"session":"b2","model":"claude-sonnet-5","turns":40,"out":15500,"in_new":9000,"cache_read":880000,"cache_write":30000,"secs":1830,"end":"2026-07-06T14:02:44.000Z"}

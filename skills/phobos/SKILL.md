@@ -60,6 +60,15 @@ The ledger is written **automatically** by a `Stop` hook (`hooks/stop.sh`) — a
 
 **Benchmark history** is separate and automatic: the `SessionEnd` hook records real per-session output/input/cache tokens + wall time to `.claude/phobos-benchmark.jsonl`. When the user asks "how much have I used / is this getting cheaper", run `bash ~/.claude/skills/phobos/hooks/benchmark.sh` — don't estimate from memory.
 
+## Enforcement hooks — signals, and how to react
+
+Some phobos rules are enforced by hooks, not left to discipline. When you hit one, cooperate with it:
+
+- **Read denied by phobos-guard** (`hooks/guard-reads.sh`, PreToolUse): the path was node_modules/lockfile/minified/build-output/git-internals or an unbounded huge read. Don't retry the identical call and don't route around it with `cat`. Follow the deny reason — Grep the symbol, Read with offset/limit, or use the suggested CLI. If the read is genuinely required, tell the user to add a regex line to `.claude/phobos-guard-allow` (or set `PHOBOS_GUARD=off`).
+- **"⚠ phobos: context ~N% full"** (`hooks/context-warn.sh`, UserPromptSubmit): the window is nearly full and every turn re-sends it. Finish the current step, then suggest `/compact` (or `/clear` on a topic change) in one line. See [references/context-hygiene.md](references/context-hygiene.md).
+- **"— context compacted —"** in the ledger (`hooks/pre-compact.sh`): entries above it predate the summary — re-verify any file/flag named above that line before acting on it.
+- Installation problems ("hooks aren't firing", "no badge") → run `bash ~/.claude/skills/phobos/hooks/doctor.sh` — it self-tests the install and prints the fix.
+
 ## Load on demand (substantive turns only)
 
 - Context hygiene — don't bloat the window; when to tell the user to `/compact`: [references/context-hygiene.md](references/context-hygiene.md)

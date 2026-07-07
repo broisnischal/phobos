@@ -11,17 +11,21 @@ cwd=$(printf '%s' "$in" | jq -r '.cwd // "."' 2>/dev/null || echo ".")
 [ -n "$tp" ] && [ -f "$tp" ] || exit 0
 
 # Basenames of files edited since the last genuine user prompt (string content,
-# not a tool_result). Empty => nothing to log.
+# not a tool_result), plus that turn's output-token cost. Empty => nothing to log.
 line=$(jq -rs '
   ([ range(0; length) as $i
      | select(.[$i].type=="user" and (.[$i].message.content|type=="string")) | $i ] | last) as $u
   | if $u == null then empty else
-      [ .[$u+1:][] | select(.type=="assistant") | .message.content[]?
-        | select(.type=="tool_use" and (.name|test("^(Edit|Write|MultiEdit|NotebookEdit)$")))
-        | .input.file_path // .input.notebook_path // empty ]
-      | map(sub(".*/";"")) | unique
-      | if length == 0 then empty
-        else "edited: " + (.[0:5] | join(", ")) + (if length > 5 then " +\(length-5) more" else "" end)
+      (.[$u+1:]) as $turn
+      | ([ $turn[] | select(.type=="assistant") | .message.content[]?
+          | select(.type=="tool_use" and (.name|test("^(Edit|Write|MultiEdit|NotebookEdit)$")))
+          | .input.file_path // .input.notebook_path // empty ]
+        | map(sub(".*/";"")) | unique) as $files
+      | ([ $turn[] | select(.type=="assistant") | .message.usage.output_tokens // 0 ] | add // 0) as $out
+      | if ($files|length) == 0 then empty
+        else "edited: " + ($files[0:5] | join(", "))
+             + (if ($files|length) > 5 then " +\(($files|length)-5) more" else "" end)
+             + (if $out > 0 then " · \(($out / 100 | round) / 10)k out" else "" end)
         end
     end' "$tp" 2>/dev/null || true)
 

@@ -16,5 +16,10 @@ after=$(git -C "$root" rev-parse --short HEAD)
 if [ "$before" = "$after" ]; then
   echo "phobos: already up to date ($after)."
 else
-  echo "phobos: $before -> $after. Restart your Claude Code session to load the changes."
+  # New releases may add hooks — wire them in (idempotent, existing settings untouched).
+  if [ -f "$root/install.sh" ]; then
+    bash "$root/install.sh" --settings-only --quiet || echo "phobos: settings merge failed — run: bash $root/install.sh" >&2
+  fi
+  v=""; [ -f "$root/VERSION" ] && v=" (v$(cat "$root/VERSION"))"
+  echo "phobos: $before -> $after$v. Restart your Claude Code session to load the changes."
 fi

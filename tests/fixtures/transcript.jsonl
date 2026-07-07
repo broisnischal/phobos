@@ -1,0 +1,4 @@
+{"type":"user","message":{"content":"please fix foo"},"timestamp":"2026-07-07T10:00:00.000Z","sessionId":"s1"}
+{"type":"assistant","message":{"model":"claude-sonnet-5","usage":{"output_tokens":500,"input_tokens":100,"cache_read_input_tokens":5000,"cache_creation_input_tokens":200},"content":[{"type":"tool_use","name":"Edit","input":{"file_path":"/repo/src/foo.ts"}}]},"timestamp":"2026-07-07T10:00:30.000Z","sessionId":"s1"}
+{"type":"user","message":{"content":[{"type":"tool_result","content":"ok"}]},"timestamp":"2026-07-07T10:00:31.000Z","sessionId":"s1"}
+{"type":"assistant","message":{"model":"claude-sonnet-5","usage":{"output_tokens":900,"input_tokens":50,"cache_read_input_tokens":6000,"cache_creation_input_tokens":100},"content":[{"type":"tool_use","name":"Write","input":{"file_path":"/repo/src/bar.ts"}},{"type":"text","text":"done"}]},"timestamp":"2026-07-07T10:01:00.000Z","sessionId":"s1"}

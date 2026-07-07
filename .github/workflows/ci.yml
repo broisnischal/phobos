@@ -1,0 +1,16 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq shellcheck
+          shellcheck -S warning install.sh uninstall.sh tests/run.sh skills/phobos/hooks/*.sh
+      - name: tests
+        run: bash tests/run.sh

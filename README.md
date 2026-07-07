@@ -1,169 +1,178 @@
 # phobos
 
-Three Claude Code skills that make every session cheaper, faster, and slop-free:
+**Make every Claude Code session cheaper, faster, and slop-free — with enforcement, not just advice.**
 
-| Skill | What it does |
-|---|---|
-| **phobos** | Always-on efficiency core: triages every turn so spend matches task size, terse-but-complete output, context hygiene, memory convention, tool routing, a live activity ledger. |
-| **phobos-code** | Coding discipline: understand fully first, climb the reuse ladder, root-cause fixes, verify before done. No slop, no wasted back-and-forth. |
-| **phobos-plan** | Request analysis: extract every ask, resolve ambiguity in one batched question, order work by dependency and risk, decide what to do first. |
+[![ci](https://github.com/broisnischal/phobos/actions/workflows/ci.yml/badge.svg)](https://github.com/broisnischal/phobos/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-They compose: the core card triages the turn, routes coding work into `phobos-code` and multi-part/vague requests into `phobos-plan`.
-
-## The key idea: spend scales to the task
-
-phobos **triages every turn first**. A `"good morning"` is answered in one line and loads nothing. The heavy machinery (full rulebook, references, sibling skills) materializes **only** for substantive tasks. The always-on footprint is a ~300-token activation card — so trivial turns stay cheap, and fewer output tokens + fewer round-trips also means faster replies.
+phobos is a skill suite + hook set for [Claude Code](https://code.claude.com). Skills steer the model (triage every turn, terse-but-complete answers, minimal correct code); hooks *enforce* the rest (block wasteful reads before they cost anything, warn when context is nearly full, track real token spend per session). Everything runs outside the request path — zero added latency per turn.
 
 ```
-phobos/
-├── README.md
-└── skills/
-    ├── phobos/
-    │   ├── ACTIVATION.md          # tiny always-on card (what the hook injects)
-    │   ├── SKILL.md               # full rulebook, loaded on demand
-    │   ├── references/
-    │   │   ├── routing.md         # task → best tool/skill/MCP (tune for your team)
-    │   │   ├── memory.md          # when/where/how to persist durable facts
-    │   │   └── context-hygiene.md # don't bloat the window; when to /compact
-    │   └── hooks/
-    │       ├── session-start.sh   # optional: makes the core always-on
-    │       ├── stop.sh            # auto-logs edited files to the ledger (Stop hook)
-    │       ├── log-activity.sh    # manual one-off ledger note
-    │       ├── statusline.sh      # renders the [phobos] status line badge
-    │       ├── session-end.sh     # records one token+time benchmark row per session
-    │       ├── benchmark.sh       # views the benchmark history
-    │       ├── savings.sh         # random riddle + estimated tokens/cost saved
-    │       └── update.sh          # pulls the latest release from GitHub
-    ├── phobos-code/SKILL.md       # coding discipline
-    └── phobos-plan/SKILL.md       # analyze, prioritize, order
+[phobos] Opus 4.8 · myrepo · $0.012 · 2m15s · +156 -23 · ctx 42%  ⋯ edited: api.ts · 1.4k out
 ```
 
-## Install
-
-Clone once, symlink the skills in:
+## Install (30 seconds)
 
 ```sh
 git clone https://github.com/broisnischal/phobos.git ~/src/phobos
-mkdir -p ~/.claude/skills
-ln -sfn ~/src/phobos/skills/phobos      ~/.claude/skills/phobos
-ln -sfn ~/src/phobos/skills/phobos-code ~/.claude/skills/phobos-code
-ln -sfn ~/src/phobos/skills/phobos-plan ~/.claude/skills/phobos-plan
+bash ~/src/phobos/install.sh
 ```
 
-That's it for **on-demand** use — `/phobos`, `/phobos-code`, `/phobos-plan` in any session. Because the skills are symlinks into one checkout, updating all three is a single pull (see **Update** below).
+Restart your Claude Code session. Done.
 
-### Always-on (optional, one extra step)
+`install.sh` symlinks the three skills into `~/.claude/skills` and merges the hooks + status line into `~/.claude/settings.json` — **idempotently**: it backs up your settings first, never touches your existing hooks, and never overwrites a custom status line. Flags: `--skills-only`, `--settings-only`, `--no-guard`, `--no-statusline`, `--quiet`. Requires `jq`.
 
-Add a `SessionStart` hook so the phobos core card loads automatically every session. Merge into `~/.claude/settings.json`:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "bash \"$HOME/.claude/skills/phobos/hooks/statusline.sh\""
-  },
-  "hooks": {
-    "SessionStart": [
-      { "hooks": [ { "type": "command", "command": "bash \"$HOME/.claude/skills/phobos/hooks/session-start.sh\"" } ] }
-    ],
-    "SessionEnd": [
-      { "hooks": [ { "type": "command", "command": "bash \"$HOME/.claude/skills/phobos/hooks/session-end.sh\"" } ] }
-    ],
-    "Stop": [
-      { "hooks": [ { "type": "command", "command": "bash \"$HOME/.claude/skills/phobos/hooks/stop.sh\"" } ] }
-    ]
-  }
-}
-```
-
-- **`statusLine`** — shows the `[phobos]` badge (plus a `[PONYTAIL]` badge if that's active), model, dir, live cost/time, and the last activity line, right in your Claude Code status bar. `statusLine` is a single command, so this one script renders everything; if you already had a status line, replace it with this (it folds ponytail's badge in for you).
-- **`SessionEnd`** — records one benchmark row per session (see below).
-- **`Stop`** — auto-writes the activity ledger after each turn that edited files (no model round-trip; see below).
-- All hooks read only data Claude Code already hands them and never run in the request path, so they don't add latency to a response. If you already have `SessionStart`/`SessionEnd`/`Stop` hooks, add these entries to the existing arrays instead of replacing them.
-
-### Verify it works
+Check the whole install any time (it self-tests the actual hooks, not just file existence):
 
 ```sh
-bash ~/.claude/skills/phobos/hooks/session-start.sh
+bash ~/.claude/skills/phobos/hooks/doctor.sh
 ```
 
-You should see the `# phobos — active` activation card. Start a new Claude Code session; a trivial message should stay short.
+## What you get
 
-## Update
+| | Feature | How |
+|---|---|---|
+| 🧠 | **Turn triage** — a greeting costs one line, not 13k tokens; heavy machinery loads only for substantive tasks | skill (always-on ~300-token card) |
+| 🛡 | **Read guard** — blocks token-wasteful reads (node_modules, lockfiles, minified/build output, unbounded huge files) *before* they cost anything, and points at the cheap alternative | PreToolUse hook |
+| 📏 | **Context gauge** — live `ctx N%` in the status line; yellow at 60%, red + `→/compact` at 80% | status line |
+| ⚠️ | **Compact warnings** — one injected line when context crosses ~75% full; rate-limited, silent otherwise | UserPromptSubmit hook |
+| 🧭 | **Activity ledger** — per-repo breadcrumb trail (`edited: api.ts · 1.4k out`), auto-written after each editing turn, tailed into every new session; compaction events are marked | Stop + PreCompact + SessionStart hooks |
+| 📊 | **Benchmark** — real tokens, est. $, cache hit-rate, wall time per session, with a trend sparkline | SessionEnd hook + viewer |
+| 🩺 | **Doctor** — one-command health check with hook self-tests | `hooks/doctor.sh` |
+| ✍️ | **Coding discipline** — reuse ladder, root-cause fixes, verify-before-done | `phobos-code` skill |
+| 🗺 | **Request analysis** — extract every ask, batch questions, order by dependency/risk | `phobos-plan` skill |
 
-When new changes are released on GitHub, pull them with one command:
+The three skills compose: **phobos** (the core card) triages each turn, routes coding work into **phobos-code** and multi-part/vague requests into **phobos-plan**.
+
+## The key idea: spend scales to the task
+
+phobos triages every turn first. `"good morning"` is answered in one line and loads nothing. The full rulebook, references, and sibling skills materialize **only** for substantive tasks — the always-on footprint is a ~300-token activation card. Fewer output tokens and fewer round-trips also mean *faster* replies; terseness is a speed feature, not just a cost one.
+
+And where discipline isn't enough, hooks enforce: the model literally cannot burn 20k tokens reading `package-lock.json`, because the guard denies the read and redirects it to `Grep` — teaching the model the cheap path *in the moment*.
+
+## The read guard
+
+`guard-reads.sh` (PreToolUse, matcher `Read`) denies, with a redirect-to-the-cheap-path reason:
+
+- `node_modules/`, `vendor/`, `.venv/`, `__pycache__/`, `.cache/` — dependency internals
+- `dist/`, `build/`, `.next/`, `.nuxt/`, `.output/`, `coverage/` — generated output
+- `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `Cargo.lock`, `poetry.lock`, `uv.lock`, `go.sum`, … — lockfiles
+- `*.min.js`, `*.map`, `*.pyc`, `*.so`, fonts, other compiled/binary blobs
+- `.git/` internals (use `git` commands instead)
+- **unbounded reads of files > 2 MB** (bounded `offset`/`limit` reads pass; tune with `PHOBOS_MAX_READ_BYTES`)
+
+Images/PDFs always pass — `Read` renders those and there is no cheaper path. Escape hatches, most-specific first:
 
 ```sh
-bash ~/.claude/skills/phobos/hooks/update.sh
+echo 'node_modules/my-patched-pkg' >> .claude/phobos-guard-allow  # per-repo regex allowlist
+PHOBOS_GUARD=off claude                                           # off for one session
+bash ~/src/phobos/install.sh --no-guard                           # never install it
 ```
 
-It finds its own checkout (wherever you cloned it), does a fast-forward `git pull`, and tells you the old → new commit. Because all three skills are symlinks into that one checkout, this updates every skill, reference, and hook at once. Plain `git pull` in the repo works too — the script just adds a clean before/after report.
+## Activity ledger — free continuity
 
-⚠ Restart your Claude Code session afterward — skills and the activation card are read at session start, so a running session keeps the old version until you start a new one.
-
-## Activity ledger — live continuity without a background process
-
-phobos keeps a per-repo `.claude/phobos-activity.log`: a 30-line, auto-trimmed breadcrumb trail of what changed. The `Stop` hook writes it **automatically** — after any turn that edited files it appends one `edited: a, b` line — with **no model round-trip, no per-turn tool call, no daemon**. Turns that change nothing log nothing. `session-start.sh` tails it after the activation card, so a new session or a post-`/clear` turn picks up where you left off without re-reading history. Add `.claude/phobos-activity.log` to your `.gitignore`. Use cases: resuming after `/clear`/`/compact`, a quick "what have we been doing" mid-session, or a cheap handoff.
-
-> Earlier versions asked the model to log each turn via a command — that added a tool round-trip (latency) per turn. It's now a hook, so logging is free.
-
-## Status line
-
-With the `statusLine` entry above wired in, every prompt shows a live badge:
+A 30-line, auto-trimmed breadcrumb trail per repo (`.claude/phobos-activity.log`). The Stop hook appends one line after any turn that edited files — with the turn's real output-token cost — and the PreCompact hook marks where compaction cut the session's memory:
 
 ```
-[phobos] [PONYTAIL] Opus 4.8 · phobos · $0.012 · 2m15s · +156 -23  ⋯ added activity ledger feature
+edited: api.ts, api.test.ts · 1.4k out
+— context compacted (auto) —
+edited: README.md · 0.6k out
 ```
 
-So you always know phobos (and ponytail) are on, plus live model/cost/time and the last thing you did. It reads only the JSON Claude Code already hands it — one `jq` parse, no transcript reads — so it's cheap enough to render on every keystroke.
+`session-start.sh` tails it into every new session, so a post-`/clear` turn picks up where you left off without re-reading history. No model round-trip, no daemon; turns that change nothing log nothing.
 
-## Benchmark — token + time history
+## Benchmark — real numbers, not vibes
 
-The `SessionEnd` hook writes one row per session to `.claude/phobos-benchmark.jsonl` (per repo): real **output / input / cache-read tokens**, **turn count**, and **wall-clock time**, all parsed from the transcript at session end — nothing runs in the request path, so there's no live-turn cost. View it any time:
+`SessionEnd` writes one row per session to `.claude/phobos-benchmark.jsonl`: output/input/cache tokens, turns, wall time. View it:
 
 ```sh
 bash ~/.claude/skills/phobos/hooks/benchmark.sh
 ```
 
 ```
-when             model            turns      out       in    cacheR    time
-2026-07-05T10:11 claude-opus-4-8     12     8200     4100    210000    7m0s
-2026-07-06T14:02 claude-sonnet-5     40    15500     9000    880000  30m30s
+when             model            turns      out       in    cacheR   hit%    est$    time
+2026-07-05T10:11 claude-opus-4-8     12     8200     4100   210000    98%   $0.42    7m0s
+2026-07-06T14:02 claude-sonnet-5     40    15500     9000   880000    98%   $0.56  30m30s
 ---
-totals:   2 sessions · 23700 out tok · 13100 in tok · 1090000 cache-read tok
+totals:   2 sessions · 23700 out tok · 13100 in tok · 1090000 cache-read tok · ~$0.98 est.
 averages: 11850 out tok/session · 1125s/session
+trend:    ▄█  (out tokens per session, oldest → newest)
 ```
 
-This is a **usage history** (tokens/time per session over time), not the old A/B harness — it needs no API key and no separate run, it just accumulates as you work. Watch output-tokens/session trend down as phobos does its job. Add `.claude/phobos-benchmark.jsonl` to `.gitignore`.
+Watch out-tokens/session trend down as phobos does its job. `$` figures are estimates from a public price table — for the trend, not your invoice. For fun, `hooks/savings.sh` prints a riddle plus estimated tokens/cost saved (tunable counterfactual via `BASELINE_MULT`).
 
-## Savings + a riddle
-
-For the fun of it, `savings.sh` prints a random phobos riddle and an **estimate** of the tokens/cost saved, from your benchmark history:
+## Update
 
 ```sh
-bash ~/.claude/skills/phobos/hooks/savings.sh
+bash ~/.claude/skills/phobos/hooks/update.sh
 ```
 
-```
-🜁 phobos
-"The best code is the code never written; the best token is the token never spent."
+Fast-forward pulls the checkout (all three skills are symlinks into it), re-runs the settings merge so hooks added by new releases wire themselves in, and reports old → new version. Restart your session afterward.
 
-Across 2 session(s) phobos generated 23700 output tokens.
-Estimated saved vs a verbose default: ~11850 tokens · ~$0.22
-(est. — assumes a non-phobos reply would be ~1.5x as long; set BASELINE_MULT to tune)
-```
+## Tuning knobs
 
-⚠ The saving is an **estimate**, not a measurement — there's no true counterfactual for what a verbose reply would have cost, so it assumes a non-phobos reply runs `BASELINE_MULT` (default 1.5) times as long. Tune with `BASELINE_MULT=2 bash .../savings.sh`. It's **on-demand only** — deliberately kept out of the status line (renders too often) and out of session context (would cost tokens every session), so it adds zero per-turn or per-render latency.
+| Variable | Default | Meaning |
+|---|---|---|
+| `PHOBOS_GUARD` | `on` | `off` disables the read guard for the session |
+| `PHOBOS_MAX_READ_BYTES` | `2097152` | unbounded-read size limit |
+| `PHOBOS_WARN_PCT` | `75` | context fill % that triggers the compact warning |
+| `PHOBOS_CTX_LIMIT` | `200000` | context window size for fallback fill math |
+| `BASELINE_MULT` | `1.5` | savings.sh's assumed verbose-reply multiplier |
 
-## Controls
-
-- **`phobos:max`** — maximum prose compression (drop articles/pleasantries, keep full technical accuracy).
-- **"stop phobos" / "normal mode"** — off for the session (per skill: "stop phobos-code", "stop phobos-plan").
+In-chat controls: **`phobos:max`** (maximum prose compression) · **"stop phobos" / "normal mode"** (off for the session; per-skill: "stop phobos-code", "stop phobos-plan").
 
 ## Customize for your team
 
-Edit `skills/phobos/references/routing.md` — it ships with a starter table. Add rows for your own MCPs/skills and **delete any tool your org doesn't have** (an unresolvable route is worse than none). This is the one file worth tuning before sharing.
+Edit `skills/phobos/references/routing.md` — the task → tool/skill/MCP map. Add rows for your own MCPs and **delete tools your org doesn't have** (an unresolvable route is worse than none). This is the one file worth tuning before sharing.
 
-## What a skill can't do
+## Manual install
 
-phobos steers behavior; it isn't a program. It **cannot** clear context itself — it detects a bloated/stale window and tells you to run `/compact` or `/clear`. Its "memory" is a convention on top of `CLAUDE.md` / the harness memory store, not a new database.
+Prefer to wire things yourself? Symlink the skills, then merge into `~/.claude/settings.json` (this is exactly what `install.sh` does):
+
+```json
+{
+  "statusLine": { "type": "command", "command": "bash \"$HOME/.claude/skills/phobos/hooks/statusline.sh\"" },
+  "hooks": {
+    "SessionStart":     [ { "hooks": [ { "type": "command", "command": "bash \"$HOME/.claude/skills/phobos/hooks/session-start.sh\"" } ] } ],
+    "SessionEnd":       [ { "hooks": [ { "type": "command", "command": "bash \"$HOME/.claude/skills/phobos/hooks/session-end.sh\"" } ] } ],
+    "Stop":             [ { "hooks": [ { "type": "command", "command": "bash \"$HOME/.claude/skills/phobos/hooks/stop.sh\"" } ] } ],
+    "PreCompact":       [ { "hooks": [ { "type": "command", "command": "bash \"$HOME/.claude/skills/phobos/hooks/pre-compact.sh\"" } ] } ],
+    "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "bash \"$HOME/.claude/skills/phobos/hooks/context-warn.sh\"" } ] } ],
+    "PreToolUse":       [ { "matcher": "Read", "hooks": [ { "type": "command", "command": "bash \"$HOME/.claude/skills/phobos/hooks/guard-reads.sh\"" } ] } ]
+  }
+}
+```
+
+Every hook reads only data Claude Code already hands it. The heaviest (SessionEnd's transcript parse) runs once, after your session is over.
+
+## Uninstall
+
+```sh
+bash ~/src/phobos/uninstall.sh
+```
+
+Removes the symlinks and strips every phobos entry from `settings.json` (backup written; your own hooks and status line survive). Per-repo data files (`.claude/phobos-*.{log,jsonl}`) are left for you to delete — add them to your projects' `.gitignore` while phobos is installed.
+
+## FAQ
+
+**Will the guard block something I actually need?** Rarely — and when it does, the deny message names the two escape hatches. Bounded reads of big files always pass, and the model is told to ask you before suggesting `PHOBOS_GUARD=off`.
+
+**Does this slow my session down?** No. Skills are static context; hooks run off the request path (status line excepted, which is one `jq` parse). Nothing calls a model.
+
+**Can phobos clear my context?** No — no skill or hook can. It watches fill level, warns you, and marks compactions in the ledger; `/compact` and `/clear` are yours to run.
+
+**Is the "savings" number real?** It's an estimate with a labelled assumption (no counterfactual exists for what a verbose reply *would* have cost). The benchmark numbers, in contrast, are real measured tokens.
+
+**I already have hooks / a status line.** install.sh appends alongside your hooks and refuses to replace a non-phobos status line. Everything is reversible via uninstall.sh.
+
+## Development
+
+```sh
+bash tests/run.sh    # 52 checks, needs only bash + jq
+```
+
+CI runs shellcheck + the suite on every push. PRs welcome — keep the phobos spirit: every feature must cost nothing on turns that don't use it.
+
+## License
+
+[MIT](LICENSE)
