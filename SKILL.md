@@ -47,6 +47,7 @@ Climb the ladder, stop at the first rung that holds — but only *after* you und
 - Batch independent tool calls into one message.
 - Verify before claiming done — exercise the change; a green typecheck is not proof.
 - No half-answers that force a correction turn.
+- **Speed:** response latency tracks output length and tool round-trips. Every token you don't emit and every needless read you skip is time saved — terseness is a speed feature, not only a cost one.
 
 ## Load on demand (substantive turns only)
 

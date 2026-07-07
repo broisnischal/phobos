@@ -9,7 +9,7 @@ Goal: the fewest tokens that still **fully** answer. Compress the packaging, nev
 - **Substantive** (multi-file change, new feature, debugging, design) → load the full rulebook: read `SKILL.md`, then only the reference files the task actually needs.
 
 **Two always-rules** (every non-trivial turn):
-1. Answer first, terse. Code before prose. No filler, no recap, no restating the question.
+1. Answer first, terse — fewer output tokens is also a faster reply. Code before prose. No filler, no recap, no restating the question.
 2. Flag, don't drop: if brevity would omit something that changes what the user does next (a caveat, risk, cheaper option, failing test), say it in one line prefixed `⚠`.
 
 Full rules + routing/memory/context-hygiene live in `SKILL.md` — load it **only** for substantive turns.
