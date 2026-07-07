@@ -49,18 +49,14 @@ Climb the ladder, stop at the first rung that holds — but only *after* you und
 - No half-answers that force a correction turn.
 - **Speed:** response latency tracks output length and tool round-trips. Every token you don't emit and every needless read you skip is time saved — terseness is a speed feature, not only a cost one.
 
-## Activity ledger — free continuity, not a service
+## Activity ledger — free continuity, no per-turn cost
 
-After a **substantive** turn (skip trivial/simple — no cost there), run one cheap append:
+The ledger is written **automatically** by a `Stop` hook (`hooks/stop.sh`) — after a turn that edited files, it appends one `edited: a, b` line to `.claude/phobos-activity.log`. **Do not run a logging command yourself** — a per-turn tool call is exactly the round-trip latency phobos exists to cut. Turns that change nothing log nothing.
 
-```sh
-bash ~/.claude/skills/phobos/hooks/log-activity.sh "<what changed, 6-12 words>"
-```
-
-- Pure `bash` append + trim to 30 lines. **No extra model call, no daemon, no live monitoring** — this is the difference between "live time" summarization done cheaply and a background summarizer that would burn the tokens/latency phobos exists to cut.
-- Lives at `.claude/phobos-activity.log` in the current repo. Add it to `.gitignore` — it's a personal breadcrumb trail, not project memory (contrast [references/memory.md](references/memory.md): memory is curated/durable, the ledger is ephemeral and auto-trimmed).
-- Read side is free too: `hooks/session-start.sh` tails the last 8 lines after the activation card, so a new session or a post-`/clear` turn re-orients without re-reading history. Mid-session, `tail .claude/phobos-activity.log` beats re-deriving "what have we been doing" from the transcript.
-- Same secrets/PII rule as memory: never log tokens, credentials, or personal data — only what changed and where.
+- Zero model action, no daemon, no live monitoring. Bounded to 30 lines.
+- Read side is free: `hooks/session-start.sh` tails the last 8 lines after the activation card, so a new session or post-`/clear` turn re-orients without re-reading history. Mid-session, `tail .claude/phobos-activity.log` beats re-deriving "what have we been doing".
+- `hooks/log-activity.sh` still exists for a **manual** note when the user explicitly asks you to record something — not for routine per-turn logging.
+- Add `.claude/phobos-activity.log` to `.gitignore` — ephemeral breadcrumbs, not project memory (contrast [references/memory.md](references/memory.md)).
 
 **Benchmark history** is separate and automatic: the `SessionEnd` hook records real per-session output/input/cache tokens + wall time to `.claude/phobos-benchmark.jsonl`. When the user asks "how much have I used / is this getting cheaper", run `bash ~/.claude/skills/phobos/hooks/benchmark.sh` — don't estimate from memory.
 

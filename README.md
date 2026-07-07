@@ -27,7 +27,8 @@ phobos/
     │   │   └── context-hygiene.md # don't bloat the window; when to /compact
     │   └── hooks/
     │       ├── session-start.sh   # optional: makes the core always-on
-    │       ├── log-activity.sh    # appends one line to the activity ledger
+    │       ├── stop.sh            # auto-logs edited files to the ledger (Stop hook)
+    │       ├── log-activity.sh    # manual one-off ledger note
     │       ├── statusline.sh      # renders the [phobos] status line badge
     │       ├── session-end.sh     # records one token+time benchmark row per session
     │       ├── benchmark.sh       # views the benchmark history
@@ -66,6 +67,9 @@ Add a `SessionStart` hook so the phobos core card loads automatically every sess
     ],
     "SessionEnd": [
       { "hooks": [ { "type": "command", "command": "bash \"$HOME/.claude/skills/phobos/hooks/session-end.sh\"" } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "bash \"$HOME/.claude/skills/phobos/hooks/stop.sh\"" } ] }
     ]
   }
 }
@@ -73,7 +77,8 @@ Add a `SessionStart` hook so the phobos core card loads automatically every sess
 
 - **`statusLine`** — shows the `[phobos]` badge (plus a `[PONYTAIL]` badge if that's active), model, dir, live cost/time, and the last activity line, right in your Claude Code status bar. `statusLine` is a single command, so this one script renders everything; if you already had a status line, replace it with this (it folds ponytail's badge in for you).
 - **`SessionEnd`** — records one benchmark row per session (see below).
-- If you already have `SessionStart`/`SessionEnd` hooks, add these entries to the existing arrays instead of replacing them.
+- **`Stop`** — auto-writes the activity ledger after each turn that edited files (no model round-trip; see below).
+- All hooks read only data Claude Code already hands them and never run in the request path, so they don't add latency to a response. If you already have `SessionStart`/`SessionEnd`/`Stop` hooks, add these entries to the existing arrays instead of replacing them.
 
 ### Verify it works
 
@@ -97,7 +102,9 @@ It finds its own checkout (wherever you cloned it), does a fast-forward `git pul
 
 ## Activity ledger — live continuity without a background process
 
-phobos keeps a per-repo `.claude/phobos-activity.log`: a 30-line, auto-trimmed breadcrumb trail of what changed, updated with one cheap `bash` append after each substantive turn — **no extra model call, no daemon, no dashboard**. `session-start.sh` tails it after the activation card, so a new session or a post-`/clear` turn picks up where you left off without re-reading history. Add `.claude/phobos-activity.log` to your `.gitignore` — it's a personal breadcrumb trail, not project memory. Use cases: resuming after `/clear`/`/compact`, a quick "what have we been doing" mid-session, or handing off to a teammate/new session cheaply.
+phobos keeps a per-repo `.claude/phobos-activity.log`: a 30-line, auto-trimmed breadcrumb trail of what changed. The `Stop` hook writes it **automatically** — after any turn that edited files it appends one `edited: a, b` line — with **no model round-trip, no per-turn tool call, no daemon**. Turns that change nothing log nothing. `session-start.sh` tails it after the activation card, so a new session or a post-`/clear` turn picks up where you left off without re-reading history. Add `.claude/phobos-activity.log` to your `.gitignore`. Use cases: resuming after `/clear`/`/compact`, a quick "what have we been doing" mid-session, or a cheap handoff.
+
+> Earlier versions asked the model to log each turn via a command — that added a tool round-trip (latency) per turn. It's now a hook, so logging is free.
 
 ## Status line
 
