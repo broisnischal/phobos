@@ -14,3 +14,10 @@ card="$here/../ACTIVATION.md"
 
 [ -f "$card" ] || { echo "phobos: ACTIVATION.md not found at $card" >&2; exit 0; }
 cat "$card"
+
+log=".claude/phobos-activity.log"
+if [ -s "$log" ]; then
+  echo
+  echo "## Recent activity (this repo)"
+  tail -n 8 "$log"
+fi

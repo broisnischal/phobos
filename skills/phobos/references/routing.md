@@ -10,6 +10,8 @@ Rule of thumb: route when the tool (a) has fresher/authoritative knowledge than 
 |---|---|---|
 | Library / framework / API docs, "how do I use X" | **context7** MCP | Current docs beat stale training memory; stops hallucinated APIs. |
 | Anything Claude/Anthropic API, model IDs, pricing, caching | **claude-api** skill | Never answer from memory — the API drifts. |
+| Building an app that calls the Claude API repeatedly with the same system prompt/context | **claude-api** skill → native prompt caching (`cache_control` breakpoints) | Anthropic-hosted cache; skip building a Redis/KV cache yourself for this. |
+| Choosing a model for a batch/classification/high-volume task | Smallest tier that meets quality (Haiku → Sonnet → Opus) | Model tiering is a per-call choice, not infra — pick it in the call, not a router service. |
 | Web page perf / Core Web Vitals / Lighthouse | **web-perf** skill | Real Chrome measurement, not guesses. |
 | Hard bug / regression / "it's broken" | **diagnose** skill | Reproduce → minimise → fix loop, not shotgun edits. |
 | Build a feature/bug test-first | **tdd** skill | Red-green-refactor discipline. |

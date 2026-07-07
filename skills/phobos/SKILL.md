@@ -49,6 +49,19 @@ Climb the ladder, stop at the first rung that holds — but only *after* you und
 - No half-answers that force a correction turn.
 - **Speed:** response latency tracks output length and tool round-trips. Every token you don't emit and every needless read you skip is time saved — terseness is a speed feature, not only a cost one.
 
+## Activity ledger — free continuity, not a service
+
+After a **substantive** turn (skip trivial/simple — no cost there), run one cheap append:
+
+```sh
+bash ~/.claude/skills/phobos/hooks/log-activity.sh "<what changed, 6-12 words>"
+```
+
+- Pure `bash` append + trim to 30 lines. **No extra model call, no daemon, no live monitoring** — this is the difference between "live time" summarization done cheaply and a background summarizer that would burn the tokens/latency phobos exists to cut.
+- Lives at `.claude/phobos-activity.log` in the current repo. Add it to `.gitignore` — it's a personal breadcrumb trail, not project memory (contrast [references/memory.md](references/memory.md): memory is curated/durable, the ledger is ephemeral and auto-trimmed).
+- Read side is free too: `hooks/session-start.sh` tails the last 8 lines after the activation card, so a new session or a post-`/clear` turn re-orients without re-reading history. Mid-session, `tail .claude/phobos-activity.log` beats re-deriving "what have we been doing" from the transcript.
+- Same secrets/PII rule as memory: never log tokens, credentials, or personal data — only what changed and where.
+
 ## Load on demand (substantive turns only)
 
 - Context hygiene — don't bloat the window; when to tell the user to `/compact`: [references/context-hygiene.md](references/context-hygiene.md)

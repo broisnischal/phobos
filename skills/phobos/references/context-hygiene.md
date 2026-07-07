@@ -9,6 +9,7 @@ Every token already in the window is re-sent (and re-billed) on every subsequent
 - **Don't echo large tool output back** in your prose. Reference the result; don't quote it.
 - **Read only what the change touches.** Trace the real flow, but don't speculatively open neighboring files "to be safe."
 - **Prefer targeted edits over reprinting.** Show the diff/hunk, not the whole rewritten file.
+- **Skip generated/vendored paths** by default — `node_modules/`, lockfiles, build output, `.git/`, minified bundles. If the repo has a `.claudeignore` (or similar convention), respect it; if it doesn't and you keep steering around the same noisy paths, suggest the user add one.
 
 ## Tell the user when to clear
 
@@ -18,6 +19,10 @@ You can't run these — recommend them:
 - **`/clear`** — wipes context entirely. Suggest when: the user pivots to an unrelated task — the old context is now pure dead weight.
 
 Phrase it as a one-line `⚠`: `⚠ Context is large and half of it is stale file reads — run /compact to cut per-turn cost.`
+
+## Cheap reorientation instead of re-reading
+
+Before re-reading the transcript or several files to answer "what have we been doing": `tail .claude/phobos-activity.log` (see `SKILL.md` § Activity ledger). It's a 30-line breadcrumb trail, auto-maintained, free to read — almost always cheaper than reconstructing context from history.
 
 ## Auto-compaction
 

@@ -4,7 +4,7 @@ Three Claude Code skills that make every session cheaper, faster, and slop-free:
 
 | Skill | What it does |
 |---|---|
-| **phobos** | Always-on efficiency core: triages every turn so spend matches task size, terse-but-complete output, context hygiene, memory convention, tool routing. |
+| **phobos** | Always-on efficiency core: triages every turn so spend matches task size, terse-but-complete output, context hygiene, memory convention, tool routing, a live activity ledger. |
 | **phobos-code** | Coding discipline: understand fully first, climb the reuse ladder, root-cause fixes, verify before done. No slop, no wasted back-and-forth. |
 | **phobos-plan** | Request analysis: extract every ask, resolve ambiguity in one batched question, order work by dependency and risk, decide what to do first. |
 
@@ -25,7 +25,9 @@ phobos/
     │   │   ├── routing.md         # task → best tool/skill/MCP (tune for your team)
     │   │   ├── memory.md          # when/where/how to persist durable facts
     │   │   └── context-hygiene.md # don't bloat the window; when to /compact
-    │   └── hooks/session-start.sh # optional: makes the core always-on
+    │   └── hooks/
+    │       ├── session-start.sh   # optional: makes the core always-on
+    │       └── log-activity.sh    # appends one line to the activity ledger
     ├── phobos-code/SKILL.md       # coding discipline
     └── phobos-plan/SKILL.md       # analyze, prioritize, order
 ```
@@ -71,6 +73,10 @@ bash ~/.claude/skills/phobos/hooks/session-start.sh
 ```
 
 You should see the `# phobos — active` activation card. Start a new Claude Code session; a trivial message should stay short.
+
+## Activity ledger — live continuity without a background process
+
+phobos keeps a per-repo `.claude/phobos-activity.log`: a 30-line, auto-trimmed breadcrumb trail of what changed, updated with one cheap `bash` append after each substantive turn — **no extra model call, no daemon, no dashboard**. `session-start.sh` tails it after the activation card, so a new session or a post-`/clear` turn picks up where you left off without re-reading history. Add `.claude/phobos-activity.log` to your `.gitignore` — it's a personal breadcrumb trail, not project memory. Use cases: resuming after `/clear`/`/compact`, a quick "what have we been doing" mid-session, or handing off to a teammate/new session cheaply.
 
 ## Controls
 

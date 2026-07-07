@@ -17,6 +17,10 @@ Persist a fact only if it's **both** durable (true next week) and not already re
 - Project constraints not visible in code (why a slow path exists, a compliance rule, an external SLA).
 - A decision and its *why* — so it isn't re-litigated.
 
+## Not the same as the activity ledger
+
+`.claude/phobos-activity.log` (see `SKILL.md` § Activity ledger) is a different, smaller thing: ephemeral, auto-trimmed, per-repo breadcrumbs of *what just happened* — not curated, not durable, not for facts. Don't duplicate ledger entries here; promote a line to real memory only if it's a fact that stays true next week.
+
 ## Don't write
 
 - Anything the repo, git history, or `CLAUDE.md` already states.

@@ -12,5 +12,8 @@ Goal: the fewest tokens that still **fully** answer. Compress the packaging, nev
 1. Answer first, terse — fewer output tokens is also a faster reply. Code before prose. No filler, no recap, no restating the question.
 2. Flag, don't drop: if brevity would omit something that changes what the user does next (a caveat, risk, cheaper option, failing test), say it in one line prefixed `⚠`.
 
+**Activity ledger** (substantive turns only, skip on trivial/simple): after finishing, run
+`bash ~/.claude/skills/phobos/hooks/log-activity.sh "<what changed, 6-12 words>"` — one cheap append, no model call, capped at 30 lines. Free continuity after `/clear`/`/compact`/new session; no secrets in it.
+
 Full rules + routing/memory/context-hygiene live in `SKILL.md` — load it **only** for substantive turns.
 Controls: `phobos:max` (max prose compression) · "stop phobos" / "normal mode" (off).
