@@ -32,15 +32,15 @@ bash ~/.claude/skills/phobos/hooks/doctor.sh
 
 | | Feature | How |
 |---|---|---|
-| 🧠 | **Turn triage** — a greeting costs one line, not 13k tokens; heavy machinery loads only for substantive tasks | skill (always-on ~300-token card) |
-| 🛡 | **Read guard** — blocks token-wasteful reads (node_modules, lockfiles, minified/build output, unbounded huge files) *before* they cost anything, and points at the cheap alternative | PreToolUse hook |
-| 📏 | **Context gauge** — live `ctx N%` in the status line; yellow at 60%, red + `→/compact` at 80% | status line |
-| ⚠️ | **Compact warnings** — one injected line when context crosses ~75% full; rate-limited, silent otherwise | UserPromptSubmit hook |
-| 🧭 | **Activity ledger** — per-repo breadcrumb trail (`edited: api.ts · 1.4k out`), auto-written after each editing turn, tailed into every new session; compaction events are marked | Stop + PreCompact + SessionStart hooks |
-| 📊 | **Benchmark** — real tokens, est. $, cache hit-rate, wall time per session, with a trend sparkline | SessionEnd hook + viewer |
-| 🩺 | **Doctor** — one-command health check with hook self-tests | `hooks/doctor.sh` |
-| ✍️ | **Coding discipline** — reuse ladder, root-cause fixes, verify-before-done | `phobos-code` skill |
-| 🗺 | **Request analysis** — extract every ask, batch questions, order by dependency/risk | `phobos-plan` skill |
+**Turn triage** — a greeting costs one line, not 13k tokens; heavy machinery loads only for substantive tasks | skill (always-on ~300-token card) |
+**Read guard** — blocks token-wasteful reads (node_modules, lockfiles, minified/build output, unbounded huge files) *before* they cost anything, and points at the cheap alternative | PreToolUse hook |
+**Context gauge** — live `ctx N%` in the status line; yellow at 60%, red + `→/compact` at 80% | status line |
+**Compact warnings** — one injected line when context crosses ~75% full; rate-limited, silent otherwise | UserPromptSubmit hook |
+**Activity ledger** — per-repo breadcrumb trail (`edited: api.ts · 1.4k out`), auto-written after each editing turn, tailed into every new session; compaction events are marked | Stop + PreCompact + SessionStart hooks |
+**Benchmark** — real tokens, est. $, cache hit-rate, wall time per session, with a trend sparkline | SessionEnd hook + viewer |
+**Doctor** — one-command health check with hook self-tests | `hooks/doctor.sh` |
+**Coding discipline** — reuse ladder, root-cause fixes, verify-before-done | `phobos-code` skill |
+**Request analysis** — extract every ask, batch questions, order by dependency/risk | `phobos-plan` skill |
 
 The three skills compose: **phobos** (the core card) triages each turn, routes coding work into **phobos-code** and multi-part/vague requests into **phobos-plan**.
 
