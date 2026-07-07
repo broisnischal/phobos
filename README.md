@@ -25,7 +25,7 @@ phobos/
 ### Fastest — clone straight into your skills dir
 
 ```sh
-git clone <THIS_REPO_URL> ~/.claude/skills/phobos
+git clone https://github.com/broisnischal/phobos.git ~/.claude/skills/phobos
 ```
 
 That's it for **on-demand** use — type `/phobos` in any session.
@@ -61,7 +61,7 @@ If you already have a `SessionStart` hook, add this entry to the existing array 
 Clone anywhere and symlink it in:
 
 ```sh
-git clone <THIS_REPO_URL> ~/src/phobos
+git clone https://github.com/broisnischal/phobos.git ~/src/phobos
 ln -s ~/src/phobos ~/.claude/skills/phobos
 ```
 
