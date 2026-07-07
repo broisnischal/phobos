@@ -55,8 +55,13 @@ Climb the ladder, stop at the first rung that holds — but only *after* you und
 - Memory — persist/recall durable facts: [references/memory.md](references/memory.md)
 - Tool & skill routing — task → best tool/MCP: [references/routing.md](references/routing.md)
 
+Sibling skills (load when installed):
+
+- Non-trivial coding task → **phobos-code**: the full coding discipline (ladder, root-cause fixes, verify-before-done).
+- Multi-part / vague / large request → **phobos-plan**: parse asks, batch questions, order by dependency and risk.
+
 ## Intensity
 
 - **default**: all rules on.
-- `phobos:max`: also compress prose to caveman level — drop articles, pleasantries, hedges; keep full technical accuracy.
+- `phobos:max`: maximum prose compression — drop articles, pleasantries, hedges; keep full technical accuracy.
 - "stop phobos" / "normal mode": off until re-invoked.

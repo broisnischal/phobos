@@ -14,7 +14,8 @@ Rule of thumb: route when the tool (a) has fresher/authoritative knowledge than 
 | Hard bug / regression / "it's broken" | **diagnose** skill | Reproduce → minimise → fix loop, not shotgun edits. |
 | Build a feature/bug test-first | **tdd** skill | Red-green-refactor discipline. |
 | Review a diff for bugs | **code-review** skill | Structured correctness pass. |
-| Review a diff for bloat/over-engineering | **ponytail-review** (if installed) | Complexity-only pass. |
+| Any non-trivial coding task | **phobos-code** skill | Minimal-correct-code discipline, no slop. |
+| Multi-part / vague / large request | **phobos-plan** skill | Parse asks, batch questions, order by dependency. |
 | Security review of pending changes | **security-review** skill | Dedicated threat pass. |
 | Cloudflare Workers / KV / D1 / R2 / Wrangler | **cloudflare** / **wrangler** skills | Provider-current, avoids deprecated syntax. |
 | Turn a plan into tickets / PRD / issues | **to-issues** / **to-prd** skills | Consistent slicing. |
