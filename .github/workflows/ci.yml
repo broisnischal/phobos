@@ -4,7 +4,7 @@ on:
   pull_request:
 
 jobs:
-  test:
+  shellcheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -12,5 +12,20 @@ jobs:
         run: |
           sudo apt-get update -q && sudo apt-get install -yq shellcheck
           shellcheck -S warning install.sh uninstall.sh tests/run.sh skills/phobos/hooks/*.sh
+
+  test:
+    # Exercise the hooks on every OS Claude Code runs on. On Windows the suite
+    # runs under Git Bash (shell: bash) — the same interpreter Claude Code uses
+    # for hooks when Git for Windows is installed. jq ships on all GH runners.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
       - name: tests
         run: bash tests/run.sh

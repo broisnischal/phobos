@@ -18,14 +18,24 @@ warn() { printf '  \033[38;5;179m⚠\033[0m %s\n' "$1"; }
 
 echo "phobos doctor — $root"
 
-# deps
-if command -v jq >/dev/null 2>&1; then ok "jq $(jq --version 2>/dev/null | sed 's/^jq-//')"; else bad "jq missing — every hook needs it (https://jqlang.org)"; fi
+# environment
+case "$(uname -s 2>/dev/null)" in
+  MINGW*|MSYS*|CYGWIN*) ok "Git Bash on Windows — Claude Code routes hooks here when Git for Windows is installed" ;;
+esac
+if command -v jq >/dev/null 2>&1; then ok "jq $(jq --version 2>/dev/null | sed 's/^jq-//')"; else bad "jq missing — every hook needs it (https://jqlang.org). Windows: 'winget install jqlang.jq' in Git Bash"; fi
 if command -v git >/dev/null 2>&1; then ok "git present"; else warn "git missing — update.sh won't work"; fi
 [ -f "$root/VERSION" ] && ok "phobos v$(cat "$root/VERSION")$(git -C "$root" rev-parse --short HEAD 2>/dev/null | sed 's/^/ @ /')" || warn "no VERSION file (old checkout?)"
 
+# CRLF line endings break the shebang under bash — the classic silent Windows failure.
+crlf=$(grep -lU "$(printf '\r')" "$here"/*.sh 2>/dev/null || true)
+if [ -n "$crlf" ]; then
+  bad "CRLF line endings in hooks — bash cannot run them (hooks fail silently). Re-clone (the repo ships .gitattributes forcing LF), or: sed -i 's/\\r\$//' $here/*.sh"
+else ok "hook line endings are LF"; fi
+
 # skills symlinked
 for s in phobos phobos-code phobos-plan; do
-  if [ -e "$cfg/skills/$s/SKILL.md" ]; then ok "skill $s → $(readlink -f "$cfg/skills/$s" 2>/dev/null || echo "$cfg/skills/$s")"
+  if [ -L "$cfg/skills/$s" ]; then ok "skill $s → $(readlink -f "$cfg/skills/$s" 2>/dev/null || readlink "$cfg/skills/$s")"
+  elif [ -e "$cfg/skills/$s/SKILL.md" ]; then ok "skill $s (copied — update.sh refreshes it after a pull)"
   else bad "skill $s not at $cfg/skills/$s — run: bash $root/install.sh"; fi
 done
 

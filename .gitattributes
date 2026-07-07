@@ -1,0 +1,11 @@
+# phobos ships shell scripts that must keep LF endings on every platform.
+# Without this, a Windows clone with core.autocrlf=true rewrites *.sh to CRLF,
+# and `#!/usr/bin/env bash\r` fails to execute — every hook then silently dies
+# (no logging, no benchmark, no status line). Force LF regardless of git config.
+*.sh    text eol=lf
+*.bash  text eol=lf
+
+# Skill/reference content is plain text; normalize to LF too.
+*.md    text eol=lf
+*.json  text eol=lf
+*.jsonl text eol=lf

@@ -18,6 +18,9 @@ for s in phobos phobos-code phobos-plan; do
       "$root"/*) rm "$link"; echo "✓ removed $link" ;;
       *) echo "⚠ $link points elsewhere ($target) — left alone" ;;
     esac
+  elif [ -d "$link" ] && [ -f "$link/SKILL.md" ] && [ -f "$root/skills/$s/SKILL.md" ]; then
+    # A copied install (Windows without symlinks) — safe to remove: it's our skill.
+    rm -rf "$link"; echo "✓ removed copied skill $link"
   fi
 done
 

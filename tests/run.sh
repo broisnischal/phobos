@@ -108,7 +108,12 @@ assert "savings: estimate printed" "$(bash "$hooks/savings.sh" "$fx/benchmark.js
 # ── install.sh / uninstall.sh (sandboxed HOME) ───────────────────────────────
 export CLAUDE_CONFIG_DIR="$tmp/claude-cfg"
 bash "$root/install.sh" --quiet
-assert "install: skill symlinked" "$(readlink "$CLAUDE_CONFIG_DIR/skills/phobos")" "skills/phobos$"
+# Symlinked on Linux/macOS; copied on Windows without Developer Mode — accept either.
+if [ -L "$CLAUDE_CONFIG_DIR/skills/phobos" ]; then
+  assert "install: skill symlinked" "$(readlink "$CLAUDE_CONFIG_DIR/skills/phobos")" "skills/phobos$"
+else
+  assert "install: skill present (copied)" "$([ -f "$CLAUDE_CONFIG_DIR/skills/phobos/SKILL.md" ] && echo yes)" '^yes$'
+fi
 s="$CLAUDE_CONFIG_DIR/settings.json"
 assert "install: valid settings.json" "$(jq -e . "$s" >/dev/null && echo valid)" '^valid$'
 for ev in SessionStart SessionEnd Stop PreCompact UserPromptSubmit PreToolUse; do
@@ -116,6 +121,12 @@ for ev in SessionStart SessionEnd Stop PreCompact UserPromptSubmit PreToolUse; d
 done
 assert "install: guard has Read matcher" "$(jq -r '.hooks.PreToolUse[0].matcher' "$s")" '^Read$'
 assert "install: statusline set" "$(jq -r '.statusLine.command' "$s")" 'statusline\.sh'
+
+# ── doctor.sh (against the sandboxed install above) ───────────────────────────
+dout=$(bash "$hooks/doctor.sh" 2>/dev/null || true)
+assert "doctor: reports LF line endings"  "$dout" 'line endings are LF'
+assert "doctor: verifies hook wiring"     "$dout" 'hook SessionStart'
+assert "doctor: self-tests the guard"     "$dout" 'guard denies a node_modules read'
 
 before=$(cat "$s"); bash "$root/install.sh" --quiet
 assert "install: idempotent re-run" "$([ "$before" = "$(cat "$s")" ] && echo same)" '^same$'
@@ -128,6 +139,12 @@ assert "uninstall: symlinks removed" "$([ ! -e "$CLAUDE_CONFIG_DIR/skills/phobos
 assert_empty "uninstall: phobos hooks stripped" "$(jq -r '[.hooks[]?[]?.hooks[]?.command // ""] | map(select(contains("phobos")))[]' "$s")"
 assert "uninstall: user's own hooks kept" "$(jq -r '.hooks.Stop[0].hooks[0].command' "$s")" '^my-own-stop\.sh$'
 assert "uninstall: custom statusline kept" "$(jq -r '.statusLine.command' "$s")" '^my-custom-line$'
+
+# Windows copy-install path: uninstall must remove a copied skill dir too, not just symlinks.
+cp2="$tmp/claude-cfg2"; mkdir -p "$cp2/skills"
+cp -R "$root/skills/phobos" "$cp2/skills/phobos"
+CLAUDE_CONFIG_DIR="$cp2" bash "$root/uninstall.sh" >/dev/null
+assert "uninstall: removes a copied skill" "$([ ! -e "$cp2/skills/phobos" ] && echo gone)" '^gone$'
 unset CLAUDE_CONFIG_DIR
 
 echo "---"

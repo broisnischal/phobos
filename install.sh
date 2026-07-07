@@ -40,12 +40,23 @@ say() { [ "$quiet" = 1 ] || echo "$@"; }
 command -v jq >/dev/null 2>&1 || { echo "install.sh: jq is required (https://jqlang.org). Install it and re-run." >&2; exit 1; }
 
 # ── 1. skills ────────────────────────────────────────────────────────────────
+# Symlink so one `git pull` updates all three skills at once. Windows without
+# Developer Mode has no real symlinks — fall back to copying (update.sh re-copies
+# after a pull, so updates still land).
 if [ "$skills" = 1 ]; then
   mkdir -p "$cfg/skills"
+  copied=0
   for s in phobos phobos-code phobos-plan; do
-    ln -sfn "$root/skills/$s" "$cfg/skills/$s"
-    say "✓ skill:  $cfg/skills/$s → $root/skills/$s"
+    target="$root/skills/$s"; link="$cfg/skills/$s"
+    [ -e "$link" ] && [ ! -L "$link" ] && rm -rf "$link"   # replace a stale copy
+    if ln -sfn "$target" "$link" 2>/dev/null && [ -L "$link" ]; then
+      say "✓ skill:  $link → $target"
+    else
+      rm -rf "$link"; cp -R "$target" "$link"; copied=1
+      say "✓ skill:  $link (copied)"
+    fi
   done
+  [ "$copied" = 1 ] && say "⚠ no symlink support here (Windows without Developer Mode?) — skills were copied, not linked. Re-run update.sh after a 'git pull' to refresh them."
 fi
 
 [ "$do_settings" = 1 ] || { say "Done (skills only). Restart your Claude Code session."; exit 0; }

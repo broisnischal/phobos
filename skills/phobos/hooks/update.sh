@@ -16,9 +16,11 @@ after=$(git -C "$root" rev-parse --short HEAD)
 if [ "$before" = "$after" ]; then
   echo "phobos: already up to date ($after)."
 else
-  # New releases may add hooks — wire them in (idempotent, existing settings untouched).
+  # Re-run the full install (idempotent): re-links/re-copies the skills so a
+  # copied Windows install picks up the new files, and re-merges settings so
+  # hooks added by a new release wire themselves in. Existing settings untouched.
   if [ -f "$root/install.sh" ]; then
-    bash "$root/install.sh" --settings-only --quiet || echo "phobos: settings merge failed — run: bash $root/install.sh" >&2
+    bash "$root/install.sh" --quiet || echo "phobos: refresh failed — run: bash $root/install.sh" >&2
   fi
   v=""; [ -f "$root/VERSION" ] && v=" (v$(cat "$root/VERSION"))"
   echo "phobos: $before -> $after$v. Restart your Claude Code session to load the changes."
