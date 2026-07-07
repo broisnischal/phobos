@@ -58,7 +58,11 @@ The ledger is written **automatically** by a `Stop` hook (`hooks/stop.sh`) — a
 - `hooks/log-activity.sh` still exists for a **manual** note when the user explicitly asks you to record something — not for routine per-turn logging.
 - Add `.claude/phobos-activity.log` to `.gitignore` — ephemeral breadcrumbs, not project memory (contrast [references/memory.md](references/memory.md)).
 
-**Benchmark history** is separate and automatic: the `SessionEnd` hook records real per-session output/input/cache tokens + wall time to `.claude/phobos-benchmark.jsonl`. When the user asks "how much have I used / is this getting cheaper", run `bash ~/.claude/skills/phobos/hooks/benchmark.sh` — don't estimate from memory.
+**Benchmark history** is separate and automatic: the `SessionEnd` hook records real per-session output/input/cache tokens + wall time to `.claude/phobos-benchmark.jsonl`. When the user asks "how much have I used / saved / is this getting cheaper", run one of these directly — don't estimate from memory and don't go hunting for the script:
+- real measured tokens + est. cost: `bash ~/.claude/skills/phobos/hooks/benchmark.sh`
+- a fun estimate of what phobos saved (riddle + saved tokens/$): `bash ~/.claude/skills/phobos/hooks/savings.sh`
+
+Both need `bash` + `jq`. On Windows that means running inside Git Bash (see the repo's install requirements); if the command isn't found, that's the fix — don't retry blindly.
 
 ## Enforcement hooks — signals, and how to react
 

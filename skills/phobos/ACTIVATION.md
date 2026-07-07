@@ -13,6 +13,7 @@ Goal: the fewest tokens that still **fully** answer. Compress the packaging, nev
 2. Flag, don't drop: if brevity would omit something that changes what the user does next (a caveat, risk, cheaper option, failing test), say it in one line prefixed `⚠`.
 
 The activity ledger is written **automatically** by a Stop hook (no model action). Don't run a logging command yourself.
+Asked what phobos **saved** or how much you've **spent**? Run `bash ~/.claude/skills/phobos/hooks/savings.sh` (estimate) or `benchmark.sh` (real tokens) — don't hunt for the script or guess. (Needs bash+jq; on Windows, Git Bash.)
 Two hook signals you may see — react, don't fight them:
 - A **phobos-guard deny** on a Read → don't retry the same read; follow the reason (Grep the symbol, Read with offset/limit, or the suggested CLI).
 - A **"⚠ phobos: context ~N% full"** line → finish the current step, then suggest `/compact` (or `/clear` on a topic switch) to the user in one line.
