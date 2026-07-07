@@ -32,6 +32,7 @@ phobos/
     │       ├── statusline.sh      # renders the [phobos] status line badge
     │       ├── session-end.sh     # records one token+time benchmark row per session
     │       ├── benchmark.sh       # views the benchmark history
+    │       ├── savings.sh         # random riddle + estimated tokens/cost saved
     │       └── update.sh          # pulls the latest release from GitHub
     ├── phobos-code/SKILL.md       # coding discipline
     └── phobos-plan/SKILL.md       # analyze, prioritize, order
@@ -134,6 +135,25 @@ averages: 11850 out tok/session · 1125s/session
 ```
 
 This is a **usage history** (tokens/time per session over time), not the old A/B harness — it needs no API key and no separate run, it just accumulates as you work. Watch output-tokens/session trend down as phobos does its job. Add `.claude/phobos-benchmark.jsonl` to `.gitignore`.
+
+## Savings + a riddle
+
+For the fun of it, `savings.sh` prints a random phobos riddle and an **estimate** of the tokens/cost saved, from your benchmark history:
+
+```sh
+bash ~/.claude/skills/phobos/hooks/savings.sh
+```
+
+```
+🜁 phobos
+"The best code is the code never written; the best token is the token never spent."
+
+Across 2 session(s) phobos generated 23700 output tokens.
+Estimated saved vs a verbose default: ~11850 tokens · ~$0.22
+(est. — assumes a non-phobos reply would be ~1.5x as long; set BASELINE_MULT to tune)
+```
+
+⚠ The saving is an **estimate**, not a measurement — there's no true counterfactual for what a verbose reply would have cost, so it assumes a non-phobos reply runs `BASELINE_MULT` (default 1.5) times as long. Tune with `BASELINE_MULT=2 bash .../savings.sh`. It's **on-demand only** — deliberately kept out of the status line (renders too often) and out of session context (would cost tokens every session), so it adds zero per-turn or per-render latency.
 
 ## Controls
 
