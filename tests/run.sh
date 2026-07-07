@@ -15,6 +15,9 @@ bad() { fail=$((fail+1)); printf '  \033[38;5;167m✗\033[0m %s\n' "$1"; }
 # assert <name> <got> <expected-grep-pattern>
 assert() { if printf '%s' "$2" | grep -Eq "$3"; then ok "$1"; else bad "$1  (got: ${2:-<empty>})"; fi; }
 assert_empty() { if [ -z "$2" ]; then ok "$1"; else bad "$1  (expected empty, got: $2)"; fi; }
+# line count, trimmed: BSD wc (macOS) right-pads "wc -l < file" with leading
+# spaces where GNU wc doesn't, which breaks anchored `^N$` matches.
+lc() { wc -l < "$1" | tr -d '[:space:]'; }
 
 command -v jq >/dev/null || { echo "tests need jq" >&2; exit 1; }
 echo "phobos tests"
@@ -50,7 +53,7 @@ printf '{"transcript_path":"%s","cwd":"%s"}' "$fx/transcript.jsonl" "$tmp/repo1"
 assert "stop: ledger line with files + tokens" "$(cat "$tmp/repo1/.claude/phobos-activity.log")" \
   '^edited: bar\.ts, foo\.ts · 1\.4k out$'
 printf '{"transcript_path":"/nonexistent","cwd":"%s"}' "$tmp/repo1" | bash "$hooks/stop.sh"
-assert "stop: missing transcript is a no-op" "$(wc -l < "$tmp/repo1/.claude/phobos-activity.log")" '^1$'
+assert "stop: missing transcript is a no-op" "$(lc "$tmp/repo1/.claude/phobos-activity.log")" '^1$'
 
 # ── pre-compact.sh ───────────────────────────────────────────────────────────
 printf '{"trigger":"auto","cwd":"%s"}' "$tmp/repo1" | bash "$hooks/pre-compact.sh"
@@ -59,7 +62,7 @@ assert "pre-compact: breadcrumb written" "$(tail -n1 "$tmp/repo1/.claude/phobos-
 
 # ── log-activity.sh (bounded to 30) ──────────────────────────────────────────
 ( cd "$tmp/repo1" && for i in $(seq 1 40); do bash "$hooks/log-activity.sh" "line $i" >/dev/null; done )
-assert "log-activity: trimmed to 30 lines" "$(wc -l < "$tmp/repo1/.claude/phobos-activity.log")" '^30$'
+assert "log-activity: trimmed to 30 lines" "$(lc "$tmp/repo1/.claude/phobos-activity.log")" '^30$'
 
 # ── session-end.sh (benchmark row) ───────────────────────────────────────────
 mkdir -p "$tmp/repo2"
@@ -70,7 +73,7 @@ assert "session-end: sums input"       "$row" '"in_new":150'
 assert "session-end: sums cache reads" "$row" '"cache_read":11000'
 assert "session-end: wall time"        "$row" '"secs":30'
 printf '{"transcript_path":"%s","cwd":"%s"}' "$fx/transcript.jsonl" "$tmp/repo2" | bash "$hooks/session-end.sh"
-assert "session-end: re-fire replaces row" "$(wc -l < "$tmp/repo2/.claude/phobos-benchmark.jsonl")" '^1$'
+assert "session-end: re-fire replaces row" "$(lc "$tmp/repo2/.claude/phobos-benchmark.jsonl")" '^1$'
 
 # ── session-start.sh (card + ledger tail) ────────────────────────────────────
 out=$(cd "$tmp/repo1" && bash "$hooks/session-start.sh")
