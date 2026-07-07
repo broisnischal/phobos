@@ -62,6 +62,8 @@ bash ~/.claude/skills/phobos/hooks/log-activity.sh "<what changed, 6-12 words>"
 - Read side is free too: `hooks/session-start.sh` tails the last 8 lines after the activation card, so a new session or a post-`/clear` turn re-orients without re-reading history. Mid-session, `tail .claude/phobos-activity.log` beats re-deriving "what have we been doing" from the transcript.
 - Same secrets/PII rule as memory: never log tokens, credentials, or personal data — only what changed and where.
 
+**Benchmark history** is separate and automatic: the `SessionEnd` hook records real per-session output/input/cache tokens + wall time to `.claude/phobos-benchmark.jsonl`. When the user asks "how much have I used / is this getting cheaper", run `bash ~/.claude/skills/phobos/hooks/benchmark.sh` — don't estimate from memory.
+
 ## Load on demand (substantive turns only)
 
 - Context hygiene — don't bloat the window; when to tell the user to `/compact`: [references/context-hygiene.md](references/context-hygiene.md)
