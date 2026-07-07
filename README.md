@@ -46,15 +46,12 @@ Windows: install Git for Windows and jq first, then run the same two commands fr
 
 ## What you get
 
-- **Turn triage** — a greeting costs one line instead of loading the full rulebook; heavy machinery loads only for real work.
-- **Read guard** — blocks reads of `node_modules`, lockfiles, minified bundles, build output, and unbounded huge files before they cost anything, and points at a cheaper alternative.
-- **Context gauge** — a live `ctx N%` in the status line, yellow past 60%, red with a compact nudge past 80%.
-- **Compact warnings** — one line injected when context crosses about 75% full, rate-limited so it doesn't nag every turn.
-- **Activity ledger** — a per-repo breadcrumb trail of what got edited and what it cost, written automatically and tailed into every new session.
-- **Benchmark** — real tokens, estimated cost, cache hit rate, and wall time per session, with a trend line.
-- **Doctor** — one command that checks the whole install and actually exercises the hooks, not just whether the files exist.
-- **Coding discipline** (`phobos-code`) — reuse before you write, fix root causes, verify before calling something done.
-- **Request analysis** (`phobos-plan`) — pull every ask out of a request, batch the questions, order the work.
+- Read guard
+- Turn triage
+- Context aware
+- Context gauge
+- Activity
+- Skills for plan and code
 
 The three skills work together: `phobos` triages every turn, and routes coding work into `phobos-code` and vague or multi-part requests into `phobos-plan`.
 
