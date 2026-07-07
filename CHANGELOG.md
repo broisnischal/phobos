@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.1.0 — 2026-07-07
+
+Cross-platform fixes — phobos now works on Windows, and its hooks stop failing
+silently there.
+
+### Fixed
+- **Windows hooks failed silently.** Two root causes: (1) no `.gitattributes`,
+  so a Windows clone with `core.autocrlf=true` rewrote every `.sh` to CRLF and
+  `#!/usr/bin/env bash\r` wouldn't execute — killing *all* hooks (no logging, no
+  benchmark, no status line); (2) with no Git for Windows installed, Claude Code
+  runs hooks in PowerShell, where `bash` isn't found. Now: a `.gitattributes`
+  forces LF on all shipped scripts, and the README/doctor make the Git-for-Windows
+  requirement explicit (Claude Code routes hooks to Git Bash when it's present,
+  even from a PowerShell terminal).
+- **"Savings" was slow to answer.** `savings.sh` was documented only in the
+  README, so when asked "what did phobos save me?" the model had to *discover*
+  the script by exploring the repo. It's now surfaced in the activation card and
+  `SKILL.md` alongside `benchmark.sh`, so the answer is one command, not a hunt.
+- **Install on Windows without Developer Mode.** `install.sh` couldn't create
+  symlinks; it now falls back to copying the skills (and `update.sh` re-copies
+  after a pull so updates still land). `uninstall.sh` removes copied skills too.
+
+### Added
+- **`.gitattributes`** — forces LF endings on all `*.sh`/`*.md`/`*.json(l)`.
+- **doctor** now checks for CRLF line endings and notes the Git-Bash-on-Windows
+  environment and copied-vs-symlinked skills.
+- **CI matrix** — the suite now runs on Linux, macOS, **and** Windows (Git Bash),
+  the three environments Claude Code executes hooks in.
+- **README** — a proper "The problem" section, a Requirements table, explicit
+  Windows setup, and a troubleshooting FAQ entry for silent-hook failures.
+
 ## 1.0.0 — 2026-07-07
 
 First versioned release. phobos graduates from "advice the model follows" to a
