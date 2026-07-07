@@ -30,7 +30,8 @@ phobos/
     │       ├── log-activity.sh    # appends one line to the activity ledger
     │       ├── statusline.sh      # renders the [phobos] status line badge
     │       ├── session-end.sh     # records one token+time benchmark row per session
-    │       └── benchmark.sh       # views the benchmark history
+    │       ├── benchmark.sh       # views the benchmark history
+    │       └── update.sh          # pulls the latest release from GitHub
     ├── phobos-code/SKILL.md       # coding discipline
     └── phobos-plan/SKILL.md       # analyze, prioritize, order
 ```
@@ -47,7 +48,7 @@ ln -sfn ~/src/phobos/skills/phobos-code ~/.claude/skills/phobos-code
 ln -sfn ~/src/phobos/skills/phobos-plan ~/.claude/skills/phobos-plan
 ```
 
-That's it for **on-demand** use — `/phobos`, `/phobos-code`, `/phobos-plan` in any session. `git pull` later updates all three.
+That's it for **on-demand** use — `/phobos`, `/phobos-code`, `/phobos-plan` in any session. Because the skills are symlinks into one checkout, updating all three is a single pull (see **Update** below).
 
 ### Always-on (optional, one extra step)
 
@@ -81,6 +82,18 @@ bash ~/.claude/skills/phobos/hooks/session-start.sh
 ```
 
 You should see the `# phobos — active` activation card. Start a new Claude Code session; a trivial message should stay short.
+
+## Update
+
+When new changes are released on GitHub, pull them with one command:
+
+```sh
+bash ~/.claude/skills/phobos/hooks/update.sh
+```
+
+It finds its own checkout (wherever you cloned it), does a fast-forward `git pull`, and tells you the old → new commit. Because all three skills are symlinks into that one checkout, this updates every skill, reference, and hook at once. Plain `git pull` in the repo works too — the script just adds a clean before/after report.
+
+⚠ Restart your Claude Code session afterward — skills and the activation card are read at session start, so a running session keeps the old version until you start a new one.
 
 ## Activity ledger — live continuity without a background process
 

@@ -80,3 +80,4 @@ Sibling skills (load when installed):
 - **default**: all rules on.
 - `phobos:max`: maximum prose compression — drop articles, pleasantries, hedges; keep full technical accuracy.
 - "stop phobos" / "normal mode": off until re-invoked.
+- Update to the latest release: `bash ~/.claude/skills/phobos/hooks/update.sh` (fast-forward pull, then restart the session).
