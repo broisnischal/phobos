@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.2.0 — 2026-07-09
+
+Seven roadmap items land: more token waste is caught by hooks before it enters
+context, and a compact state handoff now survives compaction.
+
+### Added
+- **Command guard** (`hooks/guard-cmd.sh`, PreToolUse on `Bash|Grep`) — three
+  enforcement checks, each with a steer in the deny reason:
+  - a Grep in `content` mode with no `head_limit` is denied (add a limit, or
+    locate with `files_with_matches` first);
+  - Bash output floods — recursive `ls`/`grep`, unbounded `git log` — are denied
+    unless the command is piped or redirected;
+  - a command re-run after it already failed `PHOBOS_REPEAT_MAX` (default 2)
+    times in a row with **no file edits in between** is denied, so a broken
+    command stops burning turns. Failure is read from the transcript's stable
+    `is_error` field; an edit between attempts resets the counter so a
+    legitimate re-run is never blocked.
+  Off via `PHOBOS_CMD_GUARD=off` (or `PHOBOS_GUARD=off` for all guards), and
+  `install.sh --no-cmd-guard`.
+- **Read line-count ceiling** — the read guard now also denies an unbounded Read
+  over `PHOBOS_MAX_READ_LINES` (default 2000) lines, not only over 2 MB: a file
+  can be small in bytes yet flood the window in lines (and Read truncates at its
+  own line cap, hiding the rest).
+- **State handoff** (`hooks/state.sh`) — a small `.claude/phobos-state.md`,
+  refreshed on edit turns and before every compaction and injected at session
+  start. It carries a **staleness stamp** (git SHA, branch, dirty count, UTC
+  time), the uncommitted working set, and a recent-activity tail — so a new or
+  post-`/compact`/`/clear` turn re-orients from a stamped snapshot instead of the
+  transcript summary.
+- **Cache-write visibility** — `benchmark.sh` now shows a `cacheW` column and a
+  cache-write total. Cache writes are billed at 1.25× input; the estimated-cost
+  column already counted them, but they were invisible in the table.
+
+### Changed
+- `install.sh` gains `--no-cmd-guard` and wires the second PreToolUse entry;
+  `doctor.sh` checks and self-tests the command guard; `uninstall.sh` strips it
+  automatically (it matches any `phobos/hooks/` command). Test suite grows from
+  52 to 83 checks.
+
 ## 1.1.0 — 2026-07-07
 
 Cross-platform fixes — phobos now works on Windows, and its hooks stop failing

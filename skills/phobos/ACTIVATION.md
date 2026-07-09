@@ -14,8 +14,10 @@ Goal: the fewest tokens that still **fully** answer. Compress the packaging, nev
 
 The activity ledger is written **automatically** by a Stop hook (no model action). Don't run a logging command yourself.
 Asked what phobos **saved** or how much you've **spent**? Run `bash ~/.claude/skills/phobos/hooks/savings.sh` (estimate) or `benchmark.sh` (real tokens) — don't hunt for the script or guess. (Needs bash+jq; on Windows, Git Bash.)
-Two hook signals you may see — react, don't fight them:
+Hook signals you may see — react, don't fight them:
 - A **phobos-guard deny** on a Read → don't retry the same read; follow the reason (Grep the symbol, Read with offset/limit, or the suggested CLI).
+- A **phobos-guard deny** on a Bash/Grep call → the output would flood context or you're re-running a command that already failed unchanged. Take the steer (add `head_limit`, bound/`head` the command) or fix the underlying error — don't route around it.
 - A **"⚠ phobos: context ~N% full"** line → finish the current step, then suggest `/compact` (or `/clear` on a topic switch) to the user in one line.
+- **`.claude/phobos-state.md`** injected at session start → a stamped current-state snapshot; trust it as of its git SHA, re-verify a named file/line before acting.
 
 Controls: `phobos:max` (max prose compression) · "stop phobos" / "normal mode" (off).

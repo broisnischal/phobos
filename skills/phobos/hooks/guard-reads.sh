@@ -55,15 +55,26 @@ case "${path##*/}" in
     deny "phobos-guard: ${path##*/} is a lockfile — for a dependency version, Grep the name in the manifest (package.json / Cargo.toml / pyproject.toml) or run the package manager's 'why'/'list' command. $hint" ;;
 esac
 
-# Very large text files: a full Read floods the window. Point at the scalpel.
-max="${PHOBOS_MAX_READ_BYTES:-2097152}"   # 2 MB default
+# Big unbounded reads flood the window. Two independent ceilings, because a file
+# can be small in bytes yet thousands of lines long — and Read silently truncates
+# at its own ~2000-line cap, so an unbounded read of such a file both floods the
+# window AND hides that you never saw the rest. Point at the scalpel instead.
+max_bytes="${PHOBOS_MAX_READ_BYTES:-2097152}"   # 2 MB
+max_lines="${PHOBOS_MAX_READ_LINES:-2000}"      # ~= Read's own truncation point
 if [ -f "$path" ]; then
-  size=$(stat -c%s "$path" 2>/dev/null || stat -f%z "$path" 2>/dev/null || echo 0)
-  # Only deny an UNBOUNDED read — an explicit offset/limit means the model
-  # is already reading surgically.
+  # An explicit offset/limit means the model is already reading surgically —
+  # never second-guess a bounded read, and skip the stat/wc cost entirely.
   limited=$(printf '%s' "$in" | jq -r '(.tool_input.limit // .tool_input.offset // empty)' 2>/dev/null)
-  if [ "${size:-0}" -gt "$max" ] && [ -z "$limited" ]; then
-    deny "phobos-guard: $path is $((size / 1024)) KB — too large to read whole. Use Grep to find the relevant section, then Read with offset/limit. $hint"
+  if [ -z "$limited" ]; then
+    size=$(stat -c%s "$path" 2>/dev/null || stat -f%z "$path" 2>/dev/null || echo 0)
+    if [ "${size:-0}" -gt "$max_bytes" ]; then
+      deny "phobos-guard: $path is $((size / 1024)) KB — too large to read whole. Use Grep to find the relevant section, then Read with offset/limit. $hint"
+    fi
+    # Only bother counting lines on a file the byte check already cleared.
+    lines=$(wc -l < "$path" 2>/dev/null | tr -d '[:space:]')
+    if [ -n "${lines:-}" ] && [ "$lines" -gt "$max_lines" ] 2>/dev/null; then
+      deny "phobos-guard: $path is $lines lines — an unbounded Read floods the window (and Read truncates at ~$max_lines lines, so you'd miss the rest anyway). Grep for the symbol, then Read with offset/limit. $hint"
+    fi
   fi
 fi
 

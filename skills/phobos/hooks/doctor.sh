@@ -46,7 +46,8 @@ elif ! jq -e . "$settings" >/dev/null 2>&1; then
   bad "$settings is not valid JSON"
 else
   for pair in "SessionStart:session-start.sh" "SessionEnd:session-end.sh" "Stop:stop.sh" \
-              "PreCompact:pre-compact.sh" "UserPromptSubmit:context-warn.sh" "PreToolUse:guard-reads.sh"; do
+              "PreCompact:pre-compact.sh" "UserPromptSubmit:context-warn.sh" \
+              "PreToolUse:guard-reads.sh" "PreToolUse:guard-cmd.sh"; do
     ev="${pair%%:*}"; script="${pair#*:}"
     if jq -e --arg ev "$ev" --arg s "phobos/hooks/$script" \
          '.hooks[$ev] // [] | map(.hooks[]?.command // "") | any(contains($s))' "$settings" >/dev/null 2>&1
@@ -54,6 +55,7 @@ else
     else
       case "$script" in
         guard-reads.sh) warn "hook $ev ($script) not wired — read-guard off (install.sh, or intentional via --no-guard)" ;;
+        guard-cmd.sh)   warn "hook $ev ($script) not wired — Bash/Grep guard off (install.sh, or intentional via --no-cmd-guard)" ;;
         *) bad "hook $ev ($script) not wired — run: bash $root/install.sh --settings-only" ;;
       esac
     fi
@@ -76,6 +78,9 @@ if command -v jq >/dev/null 2>&1; then
 
   o=$(printf '{"tool_name":"Read","tool_input":{"file_path":"/x/src/main.ts"}}' | bash "$here/guard-reads.sh" 2>/dev/null || true)
   if [ -z "$o" ]; then ok "guard allows normal source reads"; else bad "guard wrongly blocks normal source reads"; fi
+
+  o=$(printf '{"tool_name":"Grep","tool_input":{"pattern":"x","output_mode":"content"}}' | bash "$here/guard-cmd.sh" 2>/dev/null || true)
+  case "$o" in *'"deny"'*) ok "cmd-guard caps an unbounded content grep" ;; *) bad "guard-cmd.sh failed its self-test" ;; esac
 
   o=$(printf '{"model":{"display_name":"T"},"workspace":{"current_dir":"/x/repo"},"cost":{}}' | bash "$here/statusline.sh" 2>/dev/null || true)
   case "$o" in *phobos*) ok "statusline renders" ;; *) bad "statusline.sh failed to render" ;; esac

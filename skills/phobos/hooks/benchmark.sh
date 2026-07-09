@@ -16,8 +16,8 @@ if [ ! -s "$hist" ]; then
 fi
 
 echo "phobos benchmark — $hist"
-printf '%-16s %-16s %5s %8s %8s %9s %6s %7s %7s\n' "when" "model" "turns" "out" "in" "cacheR" "hit%" "est\$" "time"
-printf '%-16s %-16s %5s %8s %8s %9s %6s %7s %7s\n' "----" "-----" "-----" "---" "--" "------" "----" "-----" "----"
+printf '%-16s %-16s %5s %8s %8s %9s %9s %6s %7s %7s\n' "when" "model" "turns" "out" "in" "cacheR" "cacheW" "hit%" "est\$" "time"
+printf '%-16s %-16s %5s %8s %8s %9s %9s %6s %7s %7s\n' "----" "-----" "-----" "---" "--" "------" "------" "----" "-----" "----"
 
 # Per-MTok prices by model family: [input, output].
 PRICES='def price(m):
@@ -34,12 +34,12 @@ def cost: price(.model // "") as $p
 jq -r "$PRICES"'
   ((.in_new // 0) + (.cache_read // 0)) as $ctx
   | [ (.end[0:16] // "?"), (.model // "?"), (.turns|tostring), (.out|tostring),
-      (.in_new|tostring), (.cache_read|tostring),
+      (.in_new|tostring), (.cache_read|tostring), ((.cache_write // 0)|tostring),
       (if $ctx > 0 then "\((.cache_read // 0) * 100 / $ctx | floor)%" else "-" end),
       "\(cost * 100 | round / 100)",
       (.secs | if . < 60 then "\(.)s" else "\((./60)|floor)m\(.%60)s" end)
-    ] | @tsv' "$hist" | while IFS=$'\t' read -r w m t o i c h d s; do
-    printf '%-16s %-16s %5s %8s %8s %9s %6s %7s %7s\n' "$w" "$m" "$t" "$o" "$i" "$c" "$h" "\$$d" "$s"
+    ] | @tsv' "$hist" | while IFS=$'\t' read -r w m t o i c cw h d s; do
+    printf '%-16s %-16s %5s %8s %8s %9s %9s %6s %7s %7s\n' "$w" "$m" "$t" "$o" "$i" "$c" "$cw" "$h" "\$$d" "$s"
   done
 
 echo "---"
@@ -50,13 +50,14 @@ jq -rs "$PRICES"'
   | ($outs | max) as $mx
   | { n: length,
       out: ($outs|add), in: ([.[].in_new]|add), cr: ([.[].cache_read]|add),
+      cw: ([.[] | .cache_write // 0]|add),
       oa: (($outs|add) / length | floor),
       sa: ($st / length | floor),
       usd: ($sc * 100 | round / 100),
       spark: (if length < 2 or $mx == 0 then "" else
         ($outs | map("▁▂▃▄▅▆▇█"[((. * 7 / $mx) | floor):((. * 7 / $mx) | floor) + 1]) | join(""))
       end) }
-  | "totals:   \(.n) sessions · \(.out) out tok · \(.in) in tok · \(.cr) cache-read tok · ~$\(.usd) est.",
+  | "totals:   \(.n) sessions · \(.out) out tok · \(.in) in tok · \(.cr) cache-read tok · \(.cw) cache-write tok · ~$\(.usd) est.",
     "averages: \(.oa) out tok/session · \(.sa)s/session",
     (if .spark != "" then "trend:    \(.spark)  (out tokens per session, oldest → newest)" else empty end)
 ' "$hist"

@@ -13,6 +13,7 @@
 #   --skills-only     symlink skills, don't touch settings.json
 #   --settings-only   merge settings.json, don't touch symlinks
 #   --no-guard        skip the PreToolUse read-guard hook
+#   --no-cmd-guard    skip the PreToolUse Bash/Grep guard
 #   --no-statusline   skip the status line
 #   --quiet           print only warnings and errors
 #
@@ -23,12 +24,13 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cfg="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 settings="$cfg/settings.json"
 
-skills=1 do_settings=1 guard=1 statusline=1 quiet=0
+skills=1 do_settings=1 guard=1 cmdguard=1 statusline=1 quiet=0
 for a in "$@"; do
   case "$a" in
     --skills-only)   do_settings=0 ;;
     --settings-only) skills=0 ;;
     --no-guard)      guard=0 ;;
+    --no-cmd-guard)  cmdguard=0 ;;
     --no-statusline) statusline=0 ;;
     --quiet)         quiet=1 ;;
     -h|--help)       sed -n '2,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -80,7 +82,7 @@ fi
 # ensure(event; matcher; command; marker): append the hook entry unless some
 # entry for that event already runs a command containing the marker.
 merged=$(printf '%s' "$cur" | jq \
-  --arg hp "$hp" --argjson guard "$guard" --argjson statusline "$statusline" '
+  --arg hp "$hp" --argjson guard "$guard" --argjson cmdguard "$cmdguard" --argjson statusline "$statusline" '
   def ensure(ev; m; cmd; marker):
     (.hooks //= {})
     | .hooks[ev] = ((.hooks[ev] // []) as $arr
@@ -96,6 +98,9 @@ merged=$(printf '%s' "$cur" | jq \
   | (if $guard == 1
      then ensure("PreToolUse"; "Read"; "bash \"\($hp)/guard-reads.sh\""; "phobos/hooks/guard-reads.sh")
      else . end)
+  | (if $cmdguard == 1
+     then ensure("PreToolUse"; "Bash|Grep"; "bash \"\($hp)/guard-cmd.sh\""; "phobos/hooks/guard-cmd.sh")
+     else . end)
   | (if $statusline == 1 and ((.statusLine // {} | .command // "") | contains("phobos") or . == "")
      then .statusLine = {type:"command", command:"bash \"\($hp)/statusline.sh\""}
      else . end)
@@ -109,7 +114,7 @@ if [ "$statusline" = 1 ]; then
 fi
 
 printf '%s\n' "$merged" | jq . > "$settings.tmp" && mv "$settings.tmp" "$settings"
-say "✓ hooks:  SessionStart · SessionEnd · Stop · PreCompact · UserPromptSubmit$( [ "$guard" = 1 ] && echo ' · PreToolUse(guard)')"
+say "✓ hooks:  SessionStart · SessionEnd · Stop · PreCompact · UserPromptSubmit$( [ "$guard" = 1 ] && echo ' · PreToolUse(read-guard)')$( [ "$cmdguard" = 1 ] && echo ' · PreToolUse(cmd-guard)')"
 [ "$statusline" = 1 ] && say "✓ statusline wired"
 
 say ""

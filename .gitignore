@@ -1,3 +1,4 @@
 # phobos per-repo runtime files — personal breadcrumbs, not project data
 .claude/phobos-activity.log
 .claude/phobos-benchmark.jsonl
+.claude/phobos-state.md

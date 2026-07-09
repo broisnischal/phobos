@@ -14,4 +14,9 @@ mkdir -p "$cwd/.claude" 2>/dev/null || exit 0
 log="$cwd/.claude/phobos-activity.log"
 printf -- '— context compacted%s —\n' "${trigger:+ ($trigger)}" >> "$log"
 tail -n 30 "$log" > "$log.tmp" && mv "$log.tmp" "$log"
+
+# The compaction boundary is exactly when a fresh current-state snapshot matters
+# most: the transcript is about to become a summary. Capture it now.
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bash "$here/state.sh" "$cwd" 2>/dev/null || true
 exit 0

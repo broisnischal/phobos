@@ -47,6 +47,60 @@ assert "guard: denies unbounded huge read" "$(g "$(read_json "$big")")" 'offset/
 assert_empty "guard: allows bounded huge read" \
   "$(g "$(printf '{"tool_name":"Read","tool_input":{"file_path":"%s","limit":100}}' "$big")")"
 
+# Line-count ceiling: small in bytes (~23 KB) but 5000 lines — floods anyway.
+many="$tmp/many.txt"; seq 1 5000 > "$many"
+assert "guard: denies unbounded many-line read" "$(g "$(read_json "$many")")" '5000 lines'
+assert_empty "guard: allows bounded many-line read" \
+  "$(g "$(printf '{"tool_name":"Read","tool_input":{"file_path":"%s","offset":1,"limit":50}}' "$many")")"
+
+# ── guard-cmd.sh (Bash/Grep guards) ──────────────────────────────────────────
+gc() { printf '%s' "$1" | bash "$hooks/guard-cmd.sh" 2>/dev/null; }
+bash_json() { printf '{"tool_name":"Bash","tool_input":{"command":"%s"}}' "$1"; }
+
+# [#2] Grep result capping
+assert "cmd: caps content grep w/o head_limit" \
+  "$(gc '{"tool_name":"Grep","tool_input":{"pattern":"foo","output_mode":"content"}}')" '"deny"'
+assert_empty "cmd: allows content grep with head_limit" \
+  "$(gc '{"tool_name":"Grep","tool_input":{"pattern":"foo","output_mode":"content","head_limit":50}}')"
+assert_empty "cmd: allows files_with_matches grep" \
+  "$(gc '{"tool_name":"Grep","tool_input":{"pattern":"foo","output_mode":"files_with_matches"}}')"
+
+# [#1] Bash output floods — denied only in their unbounded form
+assert "cmd: denies recursive ls"        "$(gc "$(bash_json 'ls -R /etc')")" '"deny"'
+assert "cmd: denies unbounded git log"   "$(gc "$(bash_json 'git log')")" '"deny"'
+assert "cmd: denies recursive grep"      "$(gc "$(bash_json 'grep -r foo .')")" '"deny"'
+assert_empty "cmd: allows piped ls -R"   "$(gc "$(bash_json 'ls -R | head')")"
+assert_empty "cmd: allows redirected ls -R" "$(gc "$(bash_json 'ls -R > out.txt')")"
+assert_empty "cmd: allows bounded git log"  "$(gc "$(bash_json 'git log -n 20')")"
+assert_empty "cmd: allows grep -rl"      "$(gc "$(bash_json 'grep -rl foo .')")"
+assert_empty "cmd: allows plain command" "$(gc "$(bash_json 'npm test')")"
+assert_empty "cmd: PHOBOS_CMD_GUARD=off" "$(PHOBOS_CMD_GUARD=off gc "$(bash_json 'ls -R /etc')")"
+assert_empty "cmd: garbage input is silent" "$(printf 'not json' | bash "$hooks/guard-cmd.sh" 2>/dev/null)"
+
+# [#4] Repeat-failure guard — driven off transcript is_error
+rt="$tmp/repeat.jsonl"
+{
+  echo '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"npm test"}}]}}'
+  echo '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":true}]}}'
+  echo '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t2","name":"Bash","input":{"command":"npm test"}}]}}'
+  echo '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t2","is_error":true}]}}'
+} > "$rt"
+rj() { printf '{"tool_name":"Bash","transcript_path":"%s","tool_input":{"command":"%s"}}' "$rt" "$1"; }
+assert "cmd: denies 3rd blind retry after 2 fails" "$(gc "$(rj 'npm test')")" 'failed 2 time'
+assert_empty "cmd: allows a never-failed command"  "$(gc "$(rj 'echo hi')")"
+
+rte="$tmp/repeat-edit.jsonl"
+{
+  echo '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"npm test"}}]}}'
+  echo '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":true}]}}'
+  echo '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"e1","name":"Edit","input":{"file_path":"/x/a.ts"}}]}}'
+  echo '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"e1","is_error":false}]}}'
+  echo '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t2","name":"Bash","input":{"command":"npm test"}}]}}'
+  echo '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t2","is_error":true}]}}'
+} > "$rte"
+assert_empty "cmd: an edit between failures resets the counter" \
+  "$(gc "$(printf '{"tool_name":"Bash","transcript_path":"%s","tool_input":{"command":"npm test"}}' "$rte")")"
+
 # ── stop.sh (ledger breadcrumb + token cost) ─────────────────────────────────
 mkdir -p "$tmp/repo1"
 printf '{"transcript_path":"%s","cwd":"%s"}' "$fx/transcript.jsonl" "$tmp/repo1" | bash "$hooks/stop.sh"
@@ -59,6 +113,24 @@ assert "stop: missing transcript is a no-op" "$(lc "$tmp/repo1/.claude/phobos-ac
 printf '{"trigger":"auto","cwd":"%s"}' "$tmp/repo1" | bash "$hooks/pre-compact.sh"
 assert "pre-compact: breadcrumb written" "$(tail -n1 "$tmp/repo1/.claude/phobos-activity.log")" \
   '^— context compacted \(auto\) —$'
+
+# ── state.sh (current-state handoff + staleness stamp) ───────────────────────
+sng="$tmp/state-nogit"; mkdir -p "$sng"
+bash "$hooks/state.sh" "$sng" >/dev/null 2>&1
+assert "state: handles a non-git dir" "$(cat "$sng/.claude/phobos-state.md" 2>/dev/null)" 'not a git repo'
+if command -v git >/dev/null 2>&1; then
+  sr="$tmp/state-repo"; mkdir -p "$sr"
+  ( cd "$sr" && git init -q && git config user.email t@t && git config user.name t \
+    && echo hi > tracked.txt && git add tracked.txt && git commit -qm init \
+    && echo more >> tracked.txt && echo x > untracked.txt ) >/dev/null 2>&1
+  bash "$hooks/state.sh" "$sr" >/dev/null 2>&1
+  st=$(cat "$sr/.claude/phobos-state.md" 2>/dev/null)
+  assert "state: staleness stamp names the git sha" "$st" '_generated .* git [0-9a-f]+ \(.+\), 2 uncommitted'
+  assert "state: working set lists a changed file"  "$st" '^- tracked\.txt$'
+  assert "state: working set lists an untracked file" "$st" '^- untracked\.txt$'
+else
+  echo "  (skipping state.sh git tests — git not found)"
+fi
 
 # ── log-activity.sh (bounded to 30) ──────────────────────────────────────────
 ( cd "$tmp/repo1" && for i in $(seq 1 40); do bash "$hooks/log-activity.sh" "line $i" >/dev/null; done )
@@ -75,10 +147,14 @@ assert "session-end: wall time"        "$row" '"secs":30'
 printf '{"transcript_path":"%s","cwd":"%s"}' "$fx/transcript.jsonl" "$tmp/repo2" | bash "$hooks/session-end.sh"
 assert "session-end: re-fire replaces row" "$(lc "$tmp/repo2/.claude/phobos-benchmark.jsonl")" '^1$'
 
-# ── session-start.sh (card + ledger tail) ────────────────────────────────────
+# ── session-start.sh (card + handoff / ledger tail) ──────────────────────────
+rm -f "$tmp/repo1/.claude/phobos-state.md"   # exercise the ledger-tail fallback
 out=$(cd "$tmp/repo1" && bash "$hooks/session-start.sh")
 assert "session-start: activation card" "$out" 'phobos — active'
 assert "session-start: recent activity tail" "$out" 'line 40'
+printf '# phobos state\n\n_generated X · not a git repo_\n' > "$tmp/repo1/.claude/phobos-state.md"
+out=$(cd "$tmp/repo1" && bash "$hooks/session-start.sh")
+assert "session-start: prefers the state handoff" "$out" 'phobos state'
 
 # ── statusline.sh ────────────────────────────────────────────────────────────
 sl() { printf '%s' "$1" | bash "$hooks/statusline.sh" 2>/dev/null; }
@@ -104,7 +180,9 @@ rm -f "${TMPDIR:-/tmp}/phobos-warn-$sid"
 out=$(bash "$hooks/benchmark.sh" "$fx/benchmark.jsonl")
 assert "benchmark: totals"        "$out" 'totals:   2 sessions · 23700 out tok'
 assert "benchmark: est cost col"  "$out" 'est\$'
+assert "benchmark: cacheW column" "$out" 'cacheW'
 assert "benchmark: cache hit %"   "$out" '9[0-9]%'
+assert "benchmark: cache-write totals" "$out" '39000 cache-write tok'
 assert "benchmark: trend sparkline" "$out" 'trend:'
 assert "savings: estimate printed" "$(bash "$hooks/savings.sh" "$fx/benchmark.jsonl")" 'Estimated saved'
 
@@ -123,6 +201,8 @@ for ev in SessionStart SessionEnd Stop PreCompact UserPromptSubmit PreToolUse; d
   assert "install: $ev wired" "$(jq -r --arg e "$ev" '.hooks[$e][0].hooks[0].command' "$s")" 'phobos/hooks/'
 done
 assert "install: guard has Read matcher" "$(jq -r '.hooks.PreToolUse[0].matcher' "$s")" '^Read$'
+assert "install: cmd-guard wired (Bash|Grep)" \
+  "$(jq -r '.hooks.PreToolUse | map(select(.matcher=="Bash|Grep"))[0].hooks[0].command // ""' "$s")" 'guard-cmd\.sh'
 assert "install: statusline set" "$(jq -r '.statusLine.command' "$s")" 'statusline\.sh'
 
 # ── doctor.sh (against the sandboxed install above) ───────────────────────────
@@ -130,6 +210,7 @@ dout=$(bash "$hooks/doctor.sh" 2>/dev/null || true)
 assert "doctor: reports LF line endings"  "$dout" 'line endings are LF'
 assert "doctor: verifies hook wiring"     "$dout" 'hook SessionStart'
 assert "doctor: self-tests the guard"     "$dout" 'guard denies a node_modules read'
+assert "doctor: self-tests the cmd-guard" "$dout" 'cmd-guard caps an unbounded content grep'
 
 before=$(cat "$s"); bash "$root/install.sh" --quiet
 assert "install: idempotent re-run" "$([ "$before" = "$(cat "$s")" ] && echo same)" '^same$'

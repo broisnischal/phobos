@@ -35,3 +35,8 @@ mkdir -p "$cwd/.claude"
 log="$cwd/.claude/phobos-activity.log"
 printf '%s\n' "$line" >> "$log"
 tail -n 30 "$log" > "$log.tmp" && mv "$log.tmp" "$log"
+
+# Refresh the current-state handoff — only on edit turns, since that's when the
+# working set actually moved. Best-effort; must never block the turn ending.
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+bash "$here/state.sh" "$cwd" 2>/dev/null || true
