@@ -172,16 +172,20 @@ sl() { printf '%s' "$1" | bash "$hooks/statusline.sh" 2>/dev/null; }
 base='{"model":{"display_name":"Sonnet 5"},"workspace":{"current_dir":"/x/myrepo"},"cost":{"total_cost_usd":0.5,"total_duration_ms":95000}}'
 out=$(sl "$base")
 assert "statusline: badge + model + dir" "$out" 'phobos.*Sonnet 5 · myrepo'
-assert "statusline: cost + time" "$out" '\$0\.500.*1m35s'
+assert "statusline: cost" "$out" '\$0\.500'
+refute "statusline: no wall-clock time" "$out" '[0-9]+m[0-9]+s'
+winout=$(sl "$(printf '%s' "$base" | jq -c '.workspace.current_dir="C:\\Users\\Karjen\\myproj"')")
+assert "statusline: windows cwd -> basename" "$winout" 'Sonnet 5 · myproj'
+refute "statusline: no full windows cwd"     "$winout" 'Users|C:'
 out=$(sl "$(printf '%s' "$base" | jq -c '.context_window={used_percentage:83}')")
 assert "statusline: native ctx gauge + compact nudge" "$out" 'ctx 83% →/compact'
 out=$(sl "$(printf '%s' "$base" | jq -c --arg tp "$fx/transcript.jsonl" '.transcript_path=$tp')")
 assert "statusline: transcript-tail ctx fallback" "$out" 'ctx 3%'
-# session rate-limit usage (from rate_limits.five_hour)
-out=$(sl "$(printf '%s' "$base" | jq -c '.rate_limits={five_hour:{used_percentage:18.6,resets_at:1738425600}}')")
-assert "statusline: session usage %"        "$out" 'used 18%'
-assert "statusline: session usage + reset"  "$out" 'used 18%.*[0-9][0-9]:[0-9][0-9]'
-refute "statusline: no usage when absent"   "$(sl "$base")" 'used [0-9]'
+# session rate-limit usage (from rate_limits.five_hour), rounded to match /usage
+out=$(sl "$(printf '%s' "$base" | jq -c '.rate_limits={five_hour:{used_percentage:5.8}}')")
+assert "statusline: session usage % (rounded)" "$out" 'used 6%'
+refute "statusline: usage carries no reset time" "$out" '↻|[0-9][0-9]:[0-9][0-9]'
+refute "statusline: no usage when absent"        "$(sl "$base")" 'used [0-9]'
 
 # ── context-warn.sh ──────────────────────────────────────────────────────────
 cw() { printf '{"transcript_path":"%s","session_id":"%s"}' "$fx/transcript.jsonl" "$1" | \

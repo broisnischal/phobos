@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.2 — 2026-07-09
+
+Status-line polish — less clutter, more accurate.
+
+### Changed
+- Slimmer status line: dropped the wall-clock duration and the rate-limit reset
+  time. The bar is now `[phobos] model · dir · $cost · +/- · ctx N% · used N% · edited: …`.
+- Session usage `%` is now **rounded** to match what `/usage` shows, instead of
+  floored — it no longer reads a point low (5% when `/usage` said 6%).
+
+### Fixed
+- Windows working directory showed the full `C:\Users\…\proj` in the status line
+  because the basename split only handled `/`; it now strips `\` as well.
+
 ## 1.2.1 — 2026-07-09
 
 Status-line and cross-platform fixes.
