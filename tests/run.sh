@@ -186,6 +186,11 @@ out=$(sl "$(printf '%s' "$base" | jq -c '.rate_limits={five_hour:{used_percentag
 assert "statusline: session usage % (rounded)" "$out" 'used 6%'
 refute "statusline: usage carries no reset time" "$out" '↻|[0-9][0-9]:[0-9][0-9]'
 refute "statusline: no usage when absent"        "$(sl "$base")" 'used [0-9]'
+# activity ledger must resolve via the stdin project dir, not the process cwd
+led="$tmp/ledrepo"; mkdir -p "$led/.claude"
+echo 'edited: alpha.ts, beta.ts · 1.2k out' > "$led/.claude/phobos-activity.log"
+out=$(sl "$(printf '%s' "$base" | jq -c --arg d "$led" '.cwd=$d')")
+assert "statusline: ledger read from stdin cwd" "$out" 'edited: alpha\.ts, beta\.ts'
 
 # ── context-warn.sh ──────────────────────────────────────────────────────────
 cw() { printf '{"transcript_path":"%s","session_id":"%s"}' "$fx/transcript.jsonl" "$1" | \

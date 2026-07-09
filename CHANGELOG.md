@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.3 — 2026-07-09
+
+### Fixed
+- Status line dropped the `edited:` activity line in some projects. It read the
+  ledger from a path relative to the process cwd, which Claude Code doesn't
+  always set to the project root — so the file was silently missed even though
+  `stop.sh` had written it. It now resolves the ledger via the project dir on
+  stdin (`.cwd`), the same place `stop.sh` writes it.
+
 ## 1.2.2 — 2026-07-09
 
 Status-line polish — less clutter, more accurate.

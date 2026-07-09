@@ -84,8 +84,12 @@ if [ "$rlp" -ge 0 ] 2>/dev/null; then
   fi
 fi
 
-# last activity-ledger line, truncated
-log=".claude/phobos-activity.log"
+# last activity-ledger line, truncated. Resolve it via the project dir from
+# stdin, NOT the process cwd — Claude Code doesn't always launch the status line
+# from the project root, and a relative path silently misses the ledger in those
+# repos (stop.sh writes it under the JSON .cwd, so read it from the same place).
+proj=$(printf '%s' "$in" | jq -r '.cwd // .workspace.current_dir // "."' 2>/dev/null)
+log="${proj:-.}/.claude/phobos-activity.log"
 if [ -s "$log" ]; then
   last=$(tail -n1 "$log")
   [ "${#last}" -gt 48 ] && last="${last:0:47}…"
