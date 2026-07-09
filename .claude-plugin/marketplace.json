@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "phobos",
+  "description": "phobos — always-on token-efficiency discipline for Claude Code.",
+  "owner": {
+    "name": "broisnischal",
+    "email": "nischal.dahal@aitc.ai"
+  },
+  "plugins": [
+    {
+      "name": "phobos",
+      "source": "./",
+      "description": "Always-on efficiency discipline — triage token spend to task size, write minimal correct code, take fewer round-trips, keep context lean, use memory, route to the right tool. Three skills (phobos, phobos-code, phobos-plan) plus guard/state/status hooks.",
+      "version": "1.2.3",
+      "category": "productivity",
+      "keywords": ["efficiency", "tokens", "cost", "context", "productivity", "workflow"],
+      "license": "MIT"
+    }
+  ]
+}

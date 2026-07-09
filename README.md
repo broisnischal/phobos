@@ -24,6 +24,19 @@ bash ~/.claude/skills/phobos/hooks/doctor.sh
 
 Flags: `--skills-only`, `--settings-only`, `--no-guard`, `--no-cmd-guard`, `--no-statusline`, `--quiet`.
 
+## Install as a plugin
+
+phobos is also a [Claude Code plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces). Inside Claude Code:
+
+```
+/plugin marketplace add broisnischal/phobos
+/plugin install phobos@phobos
+```
+
+This installs all three skills (`phobos`, `phobos-code`, `phobos-plan`) and wires every hook automatically — no `settings.json` edits, updated with `/plugin marketplace update`.
+
+One difference from `install.sh`: a plugin can't set the main status line — Claude Code only lets plugins define `agent`/`subagentStatusLine`, and the plugin's cache path is versioned and ephemeral. To get the cost/context gauge shown above, run `install.sh` (which wires it for you), or point your own `settings.json` `statusLine` at a stable clone: `bash "$HOME/.claude/skills/phobos/hooks/statusline.sh"`.
+
 ## What you get
 
 - Read guard

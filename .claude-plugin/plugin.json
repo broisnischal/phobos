@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "phobos",
+  "displayName": "phobos",
+  "version": "1.2.3",
+  "description": "Always-on efficiency discipline for Claude Code — triage token spend to task size, write minimal correct code, take fewer round-trips, keep context lean. Ships three skills plus guard/state/status hooks.",
+  "author": {
+    "name": "broisnischal",
+    "url": "https://github.com/broisnischal"
+  },
+  "homepage": "https://github.com/broisnischal/phobos",
+  "repository": "https://github.com/broisnischal/phobos",
+  "license": "MIT",
+  "keywords": ["efficiency", "tokens", "cost", "context", "productivity", "workflow"],
+  "hooks": "./hooks/hooks.json"
+}
