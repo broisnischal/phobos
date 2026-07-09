@@ -15,6 +15,8 @@ bad() { fail=$((fail+1)); printf '  \033[38;5;167m✗\033[0m %s\n' "$1"; }
 # assert <name> <got> <expected-grep-pattern>
 assert() { if printf '%s' "$2" | grep -Eq "$3"; then ok "$1"; else bad "$1  (got: ${2:-<empty>})"; fi; }
 assert_empty() { if [ -z "$2" ]; then ok "$1"; else bad "$1  (expected empty, got: $2)"; fi; }
+# refute <name> <got> <pattern-that-must-NOT-appear>
+refute() { if printf '%s' "$2" | grep -Eq "$3"; then bad "$1  (unexpectedly matched /$3/)"; else ok "$1"; fi; }
 # line count, trimmed: BSD wc (macOS) right-pads "wc -l < file" with leading
 # spaces where GNU wc doesn't, which breaks anchored `^N$` matches.
 lc() { wc -l < "$1" | tr -d '[:space:]'; }
@@ -109,6 +111,15 @@ assert "stop: ledger line with files + tokens" "$(cat "$tmp/repo1/.claude/phobos
 printf '{"transcript_path":"/nonexistent","cwd":"%s"}' "$tmp/repo1" | bash "$hooks/stop.sh"
 assert "stop: missing transcript is a no-op" "$(lc "$tmp/repo1/.claude/phobos-activity.log")" '^1$'
 
+# Windows backslash paths must reduce to the bare filename, same as POSIX paths.
+win="$tmp/win.jsonl"
+printf '%s\n' '{"type":"user","message":{"content":"go"},"timestamp":"2026-07-07T10:00:00.000Z"}' > "$win"
+printf '%s\n' '{"type":"assistant","message":{"usage":{"output_tokens":100},"content":[{"type":"tool_use","name":"Edit","input":{"file_path":"C:\\Users\\Karjen\\.claude\\settings.json"}}]},"timestamp":"2026-07-07T10:00:30.000Z"}' >> "$win"
+mkdir -p "$tmp/winrepo"
+printf '{"transcript_path":"%s","cwd":"%s"}' "$win" "$tmp/winrepo" | bash "$hooks/stop.sh"
+assert "stop: windows path reduces to filename" "$(cat "$tmp/winrepo/.claude/phobos-activity.log")" '^edited: settings\.json'
+refute "stop: no full windows path leaks" "$(cat "$tmp/winrepo/.claude/phobos-activity.log")" 'Users|C:'
+
 # ── pre-compact.sh ───────────────────────────────────────────────────────────
 printf '{"trigger":"auto","cwd":"%s"}' "$tmp/repo1" | bash "$hooks/pre-compact.sh"
 assert "pre-compact: breadcrumb written" "$(tail -n1 "$tmp/repo1/.claude/phobos-activity.log")" \
@@ -166,6 +177,11 @@ out=$(sl "$(printf '%s' "$base" | jq -c '.context_window={used_percentage:83}')"
 assert "statusline: native ctx gauge + compact nudge" "$out" 'ctx 83% →/compact'
 out=$(sl "$(printf '%s' "$base" | jq -c --arg tp "$fx/transcript.jsonl" '.transcript_path=$tp')")
 assert "statusline: transcript-tail ctx fallback" "$out" 'ctx 3%'
+# session rate-limit usage (from rate_limits.five_hour)
+out=$(sl "$(printf '%s' "$base" | jq -c '.rate_limits={five_hour:{used_percentage:18.6,resets_at:1738425600}}')")
+assert "statusline: session usage %"        "$out" 'used 18%'
+assert "statusline: session usage + reset"  "$out" 'used 18%.*[0-9][0-9]:[0-9][0-9]'
+refute "statusline: no usage when absent"   "$(sl "$base")" 'used [0-9]'
 
 # ── context-warn.sh ──────────────────────────────────────────────────────────
 cw() { printf '{"transcript_path":"%s","session_id":"%s"}' "$fx/transcript.jsonl" "$1" | \
@@ -175,6 +191,12 @@ assert_empty "context-warn: silent under threshold" "$(cw "$sid" 200000)"
 assert "context-warn: warns when nearly full" "$(cw "$sid" 8000)" '~76% full'
 assert_empty "context-warn: rate-limited on repeat" "$(cw "$sid" 8000)"
 rm -f "${TMPDIR:-/tmp}/phobos-warn-$sid"
+# Native context % (window-aware) overrides the transcript÷PHOBOS_CTX_LIMIT path.
+nsid="phobos-nat-$$"; rm -f "${TMPDIR:-/tmp}/phobos-warn-$nsid"
+natout=$(printf '{"transcript_path":"%s","session_id":"%s","context_window":{"used_percentage":82}}' "$fx/transcript.jsonl" "$nsid" | PHOBOS_CTX_LIMIT=8000 bash "$hooks/context-warn.sh" 2>/dev/null)
+assert "context-warn: native ctx % overrides limit" "$natout" '~82% full'
+refute "context-warn: native path drops token detail" "$natout" 'tokens\)'
+rm -f "${TMPDIR:-/tmp}/phobos-warn-$nsid"
 
 # ── benchmark.sh + savings.sh (viewers) ──────────────────────────────────────
 out=$(bash "$hooks/benchmark.sh" "$fx/benchmark.jsonl")

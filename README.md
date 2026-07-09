@@ -31,6 +31,7 @@ Flags: `--skills-only`, `--settings-only`, `--no-guard`, `--no-cmd-guard`, `--no
 - Turn triage
 - Context aware
 - Context gauge
+- Session usage
 - Activity
 - State handoff
 - Skills for plan and code

@@ -20,7 +20,7 @@ line=$(jq -rs '
       | ([ $turn[] | select(.type=="assistant") | .message.content[]?
           | select(.type=="tool_use" and (.name|test("^(Edit|Write|MultiEdit|NotebookEdit)$")))
           | .input.file_path // .input.notebook_path // empty ]
-        | map(sub(".*/";"")) | unique) as $files
+        | map(sub(".*[/\\\\]";"")) | unique) as $files
       | ([ $turn[] | select(.type=="assistant") | .message.usage.output_tokens // 0 ] | add // 0) as $out
       | if ($files|length) == 0 then empty
         else "edited: " + ($files[0:5] | join(", "))

@@ -10,7 +10,7 @@ in=$(cat)
 
 # One jq pass. Unit-separator delimited: unlike tabs, \x1f isn't IFS whitespace,
 # so empty fields (e.g. no transcript_path) don't shift the columns.
-IFS=$'\x1f' read -r model dir cost dur_ms added removed tp ctxpct < <(
+IFS=$'\x1f' read -r model dir cost dur_ms added removed tp ctxpct rlpct rlreset < <(
   printf '%s' "$in" | jq -r '[
     (.model.display_name // .model.id // "?"),
     ((.workspace.current_dir // .cwd // ".") | split("/") | last),
@@ -19,7 +19,9 @@ IFS=$'\x1f' read -r model dir cost dur_ms added removed tp ctxpct < <(
     (.cost.total_lines_added // 0),
     (.cost.total_lines_removed // 0),
     (.transcript_path // ""),
-    (.context_window.used_percentage // -1 | floor)
+    (.context_window.used_percentage // -1 | floor),
+    (.rate_limits.five_hour.used_percentage // -1 | floor),
+    (.rate_limits.five_hour.resets_at // 0)
   ] | map(tostring) | join("")' 2>/dev/null
 ) || true
 
@@ -74,6 +76,23 @@ if [ "$pct" -ge 0 ] 2>/dev/null; then
   if   [ "$pct" -ge 80 ]; then out+=" ${red}· ctx ${pct}% →/compact${rst}"
   elif [ "$pct" -ge 60 ]; then out+=" ${yellow}· ctx ${pct}%${rst}"
   else                         out+=" ${dim}· ctx ${pct}%${rst}"
+  fi
+fi
+
+# Session rate-limit usage — the same rolling 5-hour window /usage shows. Only
+# present for Claude.ai Pro/Max, and only after the first API response of the
+# session, so a negative value (field absent) means render nothing.
+rlp="${rlpct:--1}"
+if [ "$rlp" -ge 0 ] 2>/dev/null; then
+  reset=""
+  if [ "${rlreset:-0}" -gt 0 ] 2>/dev/null; then
+    # epoch -> local HH:MM (GNU date, then BSD/macOS); silent if neither works.
+    t=$(date -d "@$rlreset" +%H:%M 2>/dev/null || date -r "$rlreset" +%H:%M 2>/dev/null || true)
+    [ -n "$t" ] && reset=" ↻$t"
+  fi
+  if   [ "$rlp" -ge 90 ]; then out+=" ${red}· used ${rlp}%${reset}${rst}"
+  elif [ "$rlp" -ge 75 ]; then out+=" ${yellow}· used ${rlp}%${reset}${rst}"
+  else                         out+=" ${dim}· used ${rlp}%${reset}${rst}"
   fi
 fi
 

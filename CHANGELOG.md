@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.2.1 — 2026-07-09
+
+Status-line and cross-platform fixes.
+
+### Added
+- **Session usage in the status line** — the rolling 5-hour rate-limit window
+  that `/usage` shows now renders as `used N%` (with the reset time) right next
+  to the `ctx` gauge, read from the status line's `rate_limits.five_hour` field.
+  Shown only for Claude.ai Pro/Max and only after the session's first API
+  response; hidden otherwise.
+
+### Fixed
+- **Windows paths in the activity ledger** — `stop.sh` stripped only forward
+  slashes, so an edit on Windows logged the full `C:\Users\…\settings.json`
+  instead of `settings.json`. It now strips `\` as well as `/`.
+- **False context warnings on 1M-window sessions** — `context-warn.sh` divided by
+  a fixed 200k, so an extended-context (1M) session read ~100% full when it was
+  only a fifth used. It now prefers the harness's window-aware
+  `context_window.used_percentage`, falling back to the transcript /
+  `PHOBOS_CTX_LIMIT` estimate only when that field is absent.
+
 ## 1.2.0 — 2026-07-09
 
 Seven roadmap items land: more token waste is caught by hooks before it enters
