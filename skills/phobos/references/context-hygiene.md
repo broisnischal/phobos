@@ -14,14 +14,14 @@ Every token already in the window is re-sent (and re-billed) on every subsequent
 
 ## Tell the user when to clear
 
-Two hooks already watch fill level for you: the status line shows a live `ctx N%` gauge, and `context-warn.sh` injects a `⚠ context ~N% full` line past ~75%. When that warning appears, relay it — finish the current step, then recommend the right command in one line.
+Two hooks already watch fill level for you: the status line shows a live `ctx N%` gauge, and `context-warn.sh` injects a `context ~N% full` line once it crosses ~80% (and once more near-critical). When that warning appears, relay it — finish the current step, then recommend the right command in one line.
 
 You can't run these — recommend them:
 
 - **`/compact`** — summarizes and drops old turns, keeps the thread. Suggest when: the session is long, or full of stale tool output / abandoned explorations that no longer inform the current task.
 - **`/clear`** — wipes context entirely. Suggest when: the user pivots to an unrelated task — the old context is now pure dead weight.
 
-Phrase it as a one-line `⚠`: `⚠ Context is large and half of it is stale file reads — run /compact to cut per-turn cost.`
+Phrase it as one plain line, no warning symbol: `Context is large and half of it is stale file reads — /compact will cut per-turn cost.`
 
 ## Cheap reorientation instead of re-reading
 

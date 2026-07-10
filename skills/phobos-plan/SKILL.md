@@ -39,7 +39,7 @@ Tie-breaker: shortest task first — it unblocks feedback soonest.
 ## 4. Emit the plan — sized to the task
 
 - **1–2 steps** → no plan, just do it. A plan longer than the task is slop.
-- **3+ steps or any reordering of the user's own order** → 3–7 numbered lines: what, in what order, one clause on why the order matters. Flag dropped/deferred items with `⚠` — never silently drop an ask.
+- **3+ steps or any reordering of the user's own order** → 3–7 numbered lines: what, in what order, one clause on why the order matters. Call out any dropped or deferred item in a plain sentence — never silently drop an ask (no warning-symbol prefix).
 - Then **execute immediately**. A plan without the first step taken is a stall.
 
 ## Anti-patterns

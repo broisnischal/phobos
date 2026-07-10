@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.2.5 — 2026-07-10
+
+Drop the `⚠` caveat habit.
+
+### Changed
+- Removed the "Flag, don't drop" / "Flag, don't silently drop" rule from
+  `ACTIVATION.md` and `SKILL.md`. In practice it produced unsolicited
+  "things to note" appendices and `⚠`-prefixed meta-commentary at the end of
+  replies — noise the user didn't ask for. The output contract now says: fold
+  a genuine, essential risk into a plain sentence, never as a warning block or
+  `⚠` line, and never append caveats the user didn't request.
+- `phobos-plan` and `references/context-hygiene.md` updated to match: deferred
+  asks and context-fill advice are relayed in plain sentences, no `⚠` prefix.
+- The only remaining `⚠` is the `context-warn.sh` hook's own status line
+  (unchanged) — that's tool output, not model prose.
+
 ## 1.2.4 — 2026-07-10
 
 Stop the context warning from nagging.

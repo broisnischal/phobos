@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "phobos",
   "displayName": "phobos",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Always-on efficiency discipline for Claude Code — triage token spend to task size, write minimal correct code, take fewer round-trips, keep context lean. Ships three skills plus guard/state/status hooks.",
   "author": {
     "name": "broisnischal",
