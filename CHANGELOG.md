@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.2.4 — 2026-07-10
+
+Stop the context warning from nagging.
+
+### Changed
+- `context-warn.sh` now fires **at most twice per fill-cycle** instead of once
+  every +5 points. Previously a long session got warned at ~75, 80, 85, 90,
+  95… — five or six identical "time to /compact" lines. Now it warns once when
+  fill first crosses `PHOBOS_WARN_PCT` (default raised 75 → **80**) and once
+  more when it crosses the new critical `PHOBOS_CRIT_PCT` (default **92**), then
+  stays silent no matter how high it climbs.
+- `pre-compact.sh` clears the warn state on `/compact`, so a fresh fill after a
+  compaction starts a new cycle and can warn once again — instead of the old
+  behaviour where the high-water mark stuck and it either never re-warned or
+  nagged on every refill.
+
+### Notes
+- Mute entirely with `PHOBOS_WARN_PCT=101`. Both thresholds remain tunable via
+  `PHOBOS_WARN_PCT` / `PHOBOS_CRIT_PCT`.
+
 ## 1.2.3 — 2026-07-09
 
 ### Fixed

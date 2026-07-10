@@ -10,6 +10,11 @@ IFS=$'\x1f' read -r trigger cwd < <(
   printf '%s' "$in" | jq -r '[(.trigger // ""), (.cwd // ".")] | join("")' 2>/dev/null
 ) || exit 0
 
+# Compaction resets the fill-cycle, so clear context-warn.sh's tier state: a
+# fresh fill after this /compact should be allowed to warn once again.
+sid=$(printf '%s' "$in" | jq -r '.session_id // empty' 2>/dev/null)
+[ -n "$sid" ] && rm -f "${TMPDIR:-/tmp}/phobos-warn-${sid}" 2>/dev/null || true
+
 mkdir -p "$cwd/.claude" 2>/dev/null || exit 0
 log="$cwd/.claude/phobos-activity.log"
 printf -- '— context compacted%s —\n' "${trigger:+ ($trigger)}" >> "$log"
